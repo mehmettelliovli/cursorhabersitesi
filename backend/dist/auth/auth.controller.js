@@ -15,19 +15,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
+const jwt_auth_guard_1 = require("./jwt-auth.guard");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
     async login(loginData) {
-        const user = await this.authService.validateUser(loginData.username, loginData.password);
-        if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+        console.log('Login request received in controller:', loginData);
+        try {
+            const result = await this.authService.login(loginData);
+            console.log('Login successful:', result);
+            return result;
         }
-        return this.authService.login(user);
+        catch (error) {
+            console.error('Login error in controller:', error);
+            throw error;
+        }
     }
     async register(registerData) {
         return this.authService.register(registerData);
+    }
+    getProfile(req) {
+        return req.user;
     }
 };
 exports.AuthController = AuthController;
@@ -45,6 +54,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('profile'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "getProfile", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

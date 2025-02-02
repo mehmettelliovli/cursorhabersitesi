@@ -21,55 +21,71 @@ const user_entity_1 = require("../entities/user.entity");
 const user_role_mapping_entity_1 = require("../entities/user-role-mapping.entity");
 const role_enum_1 = require("../entities/role.enum");
 const bcrypt = require("bcrypt");
-const users_service_1 = require("../users/users.service");
 let AuthService = class AuthService {
-    constructor(userRepository, userRoleMappingRepository, jwtService, usersService) {
+    constructor(userRepository, userRoleMappingRepository, jwtService) {
         this.userRepository = userRepository;
         this.userRoleMappingRepository = userRoleMappingRepository;
         this.jwtService = jwtService;
-        this.usersService = usersService;
-    }
-    async onModuleInit() {
-        await this.ensureSuperAdmin();
-    }
-    async ensureSuperAdmin() {
-        const email = 'mehmet_developer@hotmail.com';
-        const password = 'mehmet61';
-        const fullName = 'Super Admin';
-        try {
-            let superAdmin = await this.usersService.findByEmail(email);
-            if (!superAdmin) {
-                const hashedPassword = await bcrypt.hash(password, 10);
-                superAdmin = await this.usersService.create({
-                    email,
-                    password: hashedPassword,
-                    fullName,
-                });
-                await this.usersService.addRole(superAdmin.id, role_enum_1.UserRole.SUPER_ADMIN);
-                console.log('Süper admin kullanıcısı başarıyla oluşturuldu.');
-            }
-        }
-        catch (error) {
-            console.error('Süper admin oluşturulurken hata:', error);
-        }
     }
     async validateUser(email, password) {
-        const user = await this.usersService.findByEmail(email);
-        if (user && await bcrypt.compare(password, user.password)) {
-            const { password, ...result } = user;
-            return result;
+        console.log('Validating user with email:', email);
+        try {
+            const user = await this.userRepository.findOne({
+                where: { email },
+                relations: ['roleMappings']
+            });
+            console.log('Found user:', user);
+            if (!user) {
+                console.log('User not found');
+                return null;
+            }
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            console.log('Password valid:', isPasswordValid);
+            if (isPasswordValid) {
+                const { password, ...result } = user;
+                return result;
+            }
+            return null;
         }
-        return null;
+        catch (error) {
+            console.error('Error in validateUser:', error);
+            return null;
+        }
     }
-    async login(user) {
-        const payload = {
-            email: user.email,
-            sub: user.id,
-            roles: user.roleMappings?.map(rm => rm.role) || [],
-        };
-        return {
-            access_token: this.jwtService.sign(payload),
-        };
+    async login(loginData) {
+        console.log('Login attempt for email:', loginData.email);
+        try {
+            const user = await this.validateUser(loginData.email, loginData.password);
+            if (!user) {
+                console.log('User validation failed');
+                throw new common_1.UnauthorizedException('Invalid credentials');
+            }
+            console.log('User validated successfully:', user);
+            const roles = user.roleMappings
+                ?.filter(mapping => mapping.isActive)
+                .map(mapping => mapping.role) || [];
+            console.log('User roles:', roles);
+            const payload = {
+                email: user.email,
+                sub: user.id,
+                roles: roles
+            };
+            const token = this.jwtService.sign(payload);
+            console.log('JWT token generated');
+            return {
+                access_token: token,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    roles: roles
+                }
+            };
+        }
+        catch (error) {
+            console.error('Error in login:', error);
+            throw new common_1.UnauthorizedException('Login failed');
+        }
     }
     async register(userData) {
         const existingUser = await this.userRepository.findOne({
@@ -110,7 +126,6 @@ exports.AuthService = AuthService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(user_role_mapping_entity_1.UserRoleMapping)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        jwt_1.JwtService,
-        users_service_1.UsersService])
+        jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

@@ -3,7 +3,7 @@ import { News } from './news.entity';
 import { UserRole } from './role.enum';
 import { UserRoleMapping } from './user-role-mapping.entity';
 
-@Entity()
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, OnModuleInit } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,70 +6,92 @@ import { User } from '../entities/user.entity';
 import { UserRoleMapping } from '../entities/user-role-mapping.entity';
 import { UserRole } from '../entities/role.enum';
 import * as bcrypt from 'bcrypt';
-import { UsersService } from '../users/users.service';
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRoleMapping)
     private readonly userRoleMappingRepository: Repository<UserRoleMapping>,
     private readonly jwtService: JwtService,
-    private usersService: UsersService,
   ) {}
 
-  async onModuleInit() {
-    await this.ensureSuperAdmin();
-  }
-
-  private async ensureSuperAdmin() {
-    const email = 'mehmet_developer@hotmail.com';
-    const password = 'mehmet61';
-    const fullName = 'Super Admin';
-
-    try {
-      let superAdmin = await this.usersService.findByEmail(email);
-
-      if (!superAdmin) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        superAdmin = await this.usersService.create({
-          email,
-          password: hashedPassword,
-          fullName,
-        });
-
-        // Süper admin rolünü ekle
-        await this.usersService.addRole(superAdmin.id, UserRole.SUPER_ADMIN);
-        console.log('Süper admin kullanıcısı başarıyla oluşturuldu.');
-      }
-    } catch (error) {
-      console.error('Süper admin oluşturulurken hata:', error);
-    }
-  }
-
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password, ...result } = user;
-      return result;
+    console.log('Validating user with email:', email);
+    
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email },
+        relations: ['roleMappings']
+      });
+      
+      console.log('Found user:', user);
+      
+      if (!user) {
+        console.log('User not found');
+        return null;
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('Password valid:', isPasswordValid);
+
+      if (isPasswordValid) {
+        const { password, ...result } = user;
+        return result;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in validateUser:', error);
+      return null;
     }
-    return null;
   }
 
-  async login(user: any) {
-    const payload = {
-      email: user.email,
-      sub: user.id,
-      roles: user.roleMappings?.map(rm => rm.role) || [],
-    };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  async login(loginData: { email: string; password: string }) {
+    console.log('Login attempt for email:', loginData.email);
+    
+    try {
+      const user = await this.validateUser(loginData.email, loginData.password);
+      
+      if (!user) {
+        console.log('User validation failed');
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      console.log('User validated successfully:', user);
+
+      const roles = user.roleMappings
+        ?.filter(mapping => mapping.isActive)
+        .map(mapping => mapping.role) || [];
+
+      console.log('User roles:', roles);
+
+      const payload = {
+        email: user.email,
+        sub: user.id,
+        roles: roles
+      };
+
+      const token = this.jwtService.sign(payload);
+      console.log('JWT token generated');
+
+      return {
+        access_token: token,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          roles: roles
+        }
+      };
+    } catch (error) {
+      console.error('Error in login:', error);
+      throw new UnauthorizedException('Login failed');
+    }
   }
 
   async register(userData: Partial<User>): Promise<Omit<User, 'password'>> {
-    // Email kontrolü
     const existingUser = await this.userRepository.findOne({
       where: { email: userData.email }
     });

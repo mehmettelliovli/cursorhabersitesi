@@ -7,9 +7,8 @@ async function bootstrap() {
   
   // CORS ayarları
   app.enableCors({
-    origin: 'http://localhost:3001', // Frontend'in çalıştığı adres
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: 'http://localhost:5177',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
   
