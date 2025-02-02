@@ -2,33 +2,36 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
+import { UserRoleMapping } from '../entities/user-role-mapping.entity';
+import { UserRole } from '../entities/role.enum';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private userRepository: Repository<User>,
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserRoleMapping)
+    private readonly userRoleMappingRepository: Repository<UserRoleMapping>,
   ) {}
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'fullName', 'email', 'bio', 'profileImage', 'isActive'],
+      relations: ['roleMappings'],
     });
   }
 
-  async findOne(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({
+  async findOne(id: number): Promise<User | undefined> {
+    return this.userRepository.findOne({
       where: { id },
-      select: ['id', 'fullName', 'email', 'bio', 'profileImage', 'isActive'],
+      relations: ['roleMappings'],
     });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-    return user;
   }
 
-  async findByUsername(username: string): Promise<User | undefined> {
-    return this.userRepository.findOne({ where: { username } });
+  async findByEmail(email: string): Promise<User | undefined> {
+    return this.userRepository.findOne({
+      where: { email },
+      relations: ['roleMappings'],
+    });
   }
 
   async create(userData: Partial<User>): Promise<User> {
@@ -42,9 +45,34 @@ export class UsersService {
   }
 
   async delete(id: number): Promise<void> {
-    const result = await this.userRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+    await this.userRepository.delete(id);
+  }
+
+  async addRole(userId: number, role: UserRole, grantedBy?: number): Promise<void> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new Error('User not found');
     }
+
+    const roleMapping = this.userRoleMappingRepository.create({
+      user,
+      role,
+      isActive: true,
+      grantedBy,
+    });
+
+    await this.userRoleMappingRepository.save(roleMapping);
+  }
+
+  async removeRole(userId: number, role: UserRole): Promise<void> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    await this.userRoleMappingRepository.delete({
+      user: { id: userId },
+      role,
+    });
   }
 } 

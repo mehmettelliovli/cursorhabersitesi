@@ -1,21 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { News } from './news.entity';
+import { UserRole } from './role.enum';
+import { UserRoleMapping } from './user-role-mapping.entity';
 
-@Entity('users')
+@Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ unique: true })
-  username: string;
+  email: string;
 
   @Column()
   password: string;
 
-  @Column({ unique: true })
-  email: string;
-
-  @Column({ nullable: true })
+  @Column()
   fullName: string;
 
   @Column({ nullable: true })
@@ -24,15 +23,18 @@ export class User {
   @Column({ nullable: true })
   profileImage: string;
 
-  @Column('int', { array: true, default: [] })
-  roles: number[];
+  @Column({ default: true })
+  isActive: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @OneToMany(() => News, news => news.author)
   news: News[];
 
-  @Column({ default: true })
-  isActive: boolean;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
+  @OneToMany(() => UserRoleMapping, roleMapping => roleMapping.user)
+  roleMappings: UserRoleMapping[];
 } 
