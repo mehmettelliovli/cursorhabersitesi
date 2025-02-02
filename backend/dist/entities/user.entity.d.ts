@@ -11,5 +11,5 @@ export declare class User {
     createdAt: Date;
     updatedAt: Date;
     news: News[];
-    roleMappings: UserRoleMapping[];
+    userRoleMappings: UserRoleMapping[];
 }

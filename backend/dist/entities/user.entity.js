@@ -57,9 +57,9 @@ __decorate([
     __metadata("design:type", Array)
 ], User.prototype, "news", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => user_role_mapping_entity_1.UserRoleMapping, roleMapping => roleMapping.user),
+    (0, typeorm_1.OneToMany)(() => user_role_mapping_entity_1.UserRoleMapping, userRoleMapping => userRoleMapping.user),
     __metadata("design:type", Array)
-], User.prototype, "roleMappings", void 0);
+], User.prototype, "userRoleMappings", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

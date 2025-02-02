@@ -1,14 +1,17 @@
 import { Repository } from 'typeorm';
 import { News } from '../entities/news.entity';
+import { Category } from '../entities/category.entity';
 export declare class NewsService {
     private readonly newsRepository;
-    constructor(newsRepository: Repository<News>);
+    private readonly categoryRepository;
+    constructor(newsRepository: Repository<News>, categoryRepository: Repository<Category>);
     findAll(): Promise<News[]>;
     findOne(id: number): Promise<News>;
     create(newsData: any, author: any): Promise<News>;
     update(id: number, newsData: any): Promise<News>;
     delete(id: number): Promise<void>;
-    findMostViewed(): Promise<News[]>;
-    findByCategory(category: string): Promise<News[]>;
+    findMostViewed(limit?: number): Promise<News[]>;
+    findByCategory(categoryId: number): Promise<News[]>;
     incrementViewCount(id: number): Promise<void>;
+    findLatest(limit?: number): Promise<News[]>;
 }

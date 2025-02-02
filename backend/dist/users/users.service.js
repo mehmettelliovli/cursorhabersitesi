@@ -18,6 +18,8 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../entities/user.entity");
 const user_role_mapping_entity_1 = require("../entities/user-role-mapping.entity");
+const role_enum_1 = require("../entities/role.enum");
+const bcrypt = require("bcrypt");
 let UsersService = class UsersService {
     constructor(userRepository, userRoleMappingRepository) {
         this.userRepository = userRepository;
@@ -26,13 +28,18 @@ let UsersService = class UsersService {
     async findAll() {
         return this.userRepository.find({
             relations: ['roleMappings'],
+            order: { createdAt: 'DESC' },
         });
     }
     async findOne(id) {
-        return this.userRepository.findOne({
+        const user = await this.userRepository.findOne({
             where: { id },
             relations: ['roleMappings'],
         });
+        if (!user) {
+            throw new common_1.NotFoundException(`User with ID ${id} not found`);
+        }
+        return user;
     }
     async findByEmail(email) {
         return this.userRepository.findOne({
@@ -41,38 +48,74 @@ let UsersService = class UsersService {
         });
     }
     async create(userData) {
-        const user = this.userRepository.create(userData);
-        return this.userRepository.save(user);
+        const existingUser = await this.findByEmail(userData.email);
+        if (existingUser) {
+            throw new common_1.ConflictException('Email already exists');
+        }
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        const user = this.userRepository.create({
+            ...userData,
+            isActive: true,
+        });
+        const savedUser = await this.userRepository.save(user);
+        await this.addRole(savedUser.id, role_enum_1.UserRole.AUTHOR);
+        return this.findOne(savedUser.id);
     }
     async update(id, userData) {
+        const user = await this.findOne(id);
+        if (userData.email && userData.email !== user.email) {
+            const existingUser = await this.findByEmail(userData.email);
+            if (existingUser) {
+                throw new common_1.ConflictException('Email already exists');
+            }
+        }
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        else {
+            delete userData.password;
+        }
         await this.userRepository.update(id, userData);
         return this.findOne(id);
     }
     async delete(id) {
-        await this.userRepository.delete(id);
+        const user = await this.findOne(id);
+        user.isActive = false;
+        await this.userRepository.save(user);
     }
     async addRole(userId, role, grantedBy) {
         const user = await this.findOne(userId);
-        if (!user) {
-            throw new Error('User not found');
-        }
-        const roleMapping = this.userRoleMappingRepository.create({
-            user,
-            role,
-            isActive: true,
-            grantedBy,
+        const existingRole = await this.userRoleMappingRepository.findOne({
+            where: {
+                user: { id: userId },
+                role,
+                isActive: true,
+            },
         });
-        await this.userRoleMappingRepository.save(roleMapping);
+        if (!existingRole) {
+            const roleMapping = this.userRoleMappingRepository.create({
+                user,
+                role,
+                isActive: true,
+                grantedBy,
+            });
+            await this.userRoleMappingRepository.save(roleMapping);
+        }
     }
     async removeRole(userId, role) {
-        const user = await this.findOne(userId);
-        if (!user) {
-            throw new Error('User not found');
-        }
-        await this.userRoleMappingRepository.delete({
-            user: { id: userId },
-            role,
+        const roleMapping = await this.userRoleMappingRepository.findOne({
+            where: {
+                user: { id: userId },
+                role,
+                isActive: true,
+            },
         });
+        if (roleMapping) {
+            roleMapping.isActive = false;
+            await this.userRoleMappingRepository.save(roleMapping);
+        }
     }
 };
 exports.UsersService = UsersService;

@@ -21,7 +21,7 @@ __decorate([
     __metadata("design:type", Number)
 ], UserRoleMapping.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.roleMappings, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.userRoleMappings, { onDelete: 'CASCADE' }),
     __metadata("design:type", user_entity_1.User)
 ], UserRoleMapping.prototype, "user", void 0);
 __decorate([
@@ -49,6 +49,6 @@ __decorate([
     __metadata("design:type", Number)
 ], UserRoleMapping.prototype, "grantedBy", void 0);
 exports.UserRoleMapping = UserRoleMapping = __decorate([
-    (0, typeorm_1.Entity)()
+    (0, typeorm_1.Entity)('user_role_mappings')
 ], UserRoleMapping);
 //# sourceMappingURL=user-role-mapping.entity.js.map

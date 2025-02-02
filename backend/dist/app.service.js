@@ -27,7 +27,7 @@ let AppService = class AppService {
         return 'Hello World!';
     }
     async getDashboardStats() {
-        const [totalNews, totalUsers, recentNews, authors] = await Promise.all([
+        const [newsCount, userCount, latestNews, topAuthors] = await Promise.all([
             this.newsRepository.count(),
             this.userRepository.count(),
             this.newsRepository.find({
@@ -37,24 +37,19 @@ let AppService = class AppService {
             }),
             this.userRepository
                 .createQueryBuilder('user')
-                .loadRelationCountAndMap('user.newsCount', 'user.news')
-                .orderBy('user.newsCount', 'DESC')
-                .take(5)
-                .getMany(),
+                .leftJoin('user.news', 'news')
+                .select(['user.id', 'user.email', 'user.fullName', 'user.bio', 'user.profileImage', 'user.isActive'])
+                .addSelect('COUNT(news.id)', 'newsCount')
+                .groupBy('user.id')
+                .orderBy('newsCount', 'DESC')
+                .limit(5)
+                .getRawMany(),
         ]);
         return {
-            totalNews,
-            totalUsers,
-            recentNews: recentNews.map(news => ({
-                id: news.id,
-                title: news.title,
-                createdAt: news.createdAt,
-            })),
-            topAuthors: authors.map(author => ({
-                id: author.id,
-                fullName: author.fullName,
-                newsCount: author['newsCount'] || 0,
-            })),
+            newsCount,
+            userCount,
+            latestNews,
+            topAuthors,
         };
     }
 };

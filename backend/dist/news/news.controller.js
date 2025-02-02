@@ -21,14 +21,17 @@ let NewsController = class NewsController {
     constructor(newsService) {
         this.newsService = newsService;
     }
-    findAll() {
+    async findAll() {
         return this.newsService.findAll();
     }
-    findMostViewed() {
-        return this.newsService.findMostViewed();
+    async findLatest(limit) {
+        return this.newsService.findLatest(limit);
     }
-    findByCategory(category) {
-        return this.newsService.findByCategory(category);
+    async findMostViewed(limit) {
+        return this.newsService.findMostViewed(limit);
+    }
+    async findByCategory(id) {
+        return this.newsService.findByCategory(+id);
     }
     async findOne(id) {
         const news = await this.newsService.findOne(+id);
@@ -50,20 +53,28 @@ __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Get)('most-viewed'),
+    (0, common_1.Get)('latest'),
+    __param(0, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "findLatest", null);
+__decorate([
+    (0, common_1.Get)('most-viewed'),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findMostViewed", null);
 __decorate([
-    (0, common_1.Get)('category/:category'),
-    __param(0, (0, common_1.Param)('category')),
+    (0, common_1.Get)('category/:id'),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findByCategory", null);
 __decorate([
     (0, common_1.Get)(':id'),

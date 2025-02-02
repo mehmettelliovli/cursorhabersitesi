@@ -29,10 +29,10 @@ exports.AuthModule = AuthModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, user_role_mapping_entity_1.UserRoleMapping]),
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '1d' },
+                signOptions: { expiresIn: '24h' },
             }),
         ],
-        providers: [auth_service_1.AuthService, local_strategy_1.LocalStrategy, jwt_strategy_1.JwtStrategy],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, local_strategy_1.LocalStrategy],
         controllers: [auth_controller_1.AuthController],
         exports: [auth_service_1.AuthService],
     })
