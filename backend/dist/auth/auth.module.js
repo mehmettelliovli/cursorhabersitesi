@@ -8,16 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
+const auth_service_1 = require("./auth.service");
+const auth_controller_1 = require("./auth.controller");
+const users_module_1 = require("../users/users.module");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const jwt_strategy_1 = require("./jwt.strategy");
 const typeorm_1 = require("@nestjs/typeorm");
 const user_entity_1 = require("../entities/user.entity");
-const user_role_mapping_entity_1 = require("../entities/user-role-mapping.entity");
-const users_module_1 = require("../users/users.module");
-const auth_controller_1 = require("./auth.controller");
-const auth_service_1 = require("./auth.service");
-const jwt_strategy_1 = require("./jwt.strategy");
-const local_strategy_1 = require("./local.strategy");
+const config_1 = require("@nestjs/config");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -26,13 +25,17 @@ exports.AuthModule = AuthModule = __decorate([
         imports: [
             users_module_1.UsersModule,
             passport_1.PassportModule,
-            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, user_role_mapping_entity_1.UserRoleMapping]),
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '24h' },
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User]),
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: (configService) => ({
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN') },
+                }),
+                inject: [config_1.ConfigService],
             }),
         ],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, local_strategy_1.LocalStrategy],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
         controllers: [auth_controller_1.AuthController],
         exports: [auth_service_1.AuthService],
     })

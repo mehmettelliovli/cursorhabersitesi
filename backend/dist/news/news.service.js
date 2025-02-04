@@ -107,10 +107,14 @@ let NewsService = class NewsService {
         return this.findOne(id);
     }
     async delete(id) {
-        const result = await this.newsRepository.update(id, { isActive: false });
-        if (result.affected === 0) {
+        const news = await this.newsRepository.findOne({
+            where: { id, isActive: true }
+        });
+        if (!news) {
             throw new common_1.NotFoundException(`News with ID ${id} not found`);
         }
+        news.isActive = false;
+        await this.newsRepository.save(news);
     }
     async findMostViewed(limit = 5) {
         return this.newsRepository.find({
@@ -146,6 +150,29 @@ let NewsService = class NewsService {
             order: { createdAt: 'DESC' },
             take: limit,
         });
+    }
+    async findByAuthor(authorId) {
+        return this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.isActive = :isActive', { isActive: true })
+            .andWhere('author.id = :authorId', { authorId })
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getMany();
     }
 };
 exports.NewsService = NewsService;

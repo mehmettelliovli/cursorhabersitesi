@@ -14,4 +14,5 @@ export declare class NewsService {
     findByCategory(categoryId: number): Promise<News[]>;
     incrementViewCount(id: number): Promise<void>;
     findLatest(limit?: number): Promise<News[]>;
+    findByAuthor(authorId: number): Promise<News[]>;
 }

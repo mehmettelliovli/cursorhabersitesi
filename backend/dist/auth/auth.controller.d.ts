@@ -8,19 +8,23 @@ export declare class AuthController {
     }): Promise<{
         access_token: string;
         user: {
-            roles: import("../entities/role.enum").UserRole[];
-            id: number;
-            email: string;
-            fullName: string;
-            bio: string;
-            profileImage: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            news: import("../entities/news.entity").News[];
-            userRoleMappings: import("../entities/user-role-mapping.entity").UserRoleMapping[];
+            id: any;
+            email: any;
+            fullName: any;
+            role: any;
         };
     }>;
-    register(registerData: any): Promise<Omit<import("../entities/user.entity").User, "password">>;
+    register(registerData: any): Promise<{
+        id: number;
+        email: string;
+        fullName: string;
+        bio: string;
+        profileImage: string;
+        isActive: boolean;
+        role: import("../entities/role.enum").UserRole;
+        createdAt: Date;
+        updatedAt: Date;
+        news: import("../entities/news.entity").News[];
+    }>;
     getProfile(req: any): any;
 }

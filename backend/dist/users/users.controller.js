@@ -16,72 +16,98 @@ exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const users_service_1 = require("./users.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
-const roles_decorator_1 = require("../auth/roles.decorator");
+const roles_guard_1 = require("../guards/roles.guard");
+const roles_decorator_1 = require("../decorators/roles.decorator");
+const role_enum_1 = require("../entities/role.enum");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
-    findAll() {
+    async findAll() {
         return this.usersService.findAll();
     }
-    findOne(id) {
+    async getProfile(req) {
+        return this.usersService.findOne(req.user.id);
+    }
+    async findOne(id) {
         return this.usersService.findOne(+id);
     }
-    create(userData) {
-        return this.usersService.create(userData);
+    async create(createUserDto) {
+        return this.usersService.create(createUserDto);
     }
-    update(id, userData) {
-        return this.usersService.update(+id, userData);
+    async update(id, updateUserDto, req) {
+        if (req.user.role !== role_enum_1.UserRole.SUPER_ADMIN && req.user.id !== +id) {
+            throw new common_1.UnauthorizedException('You can only update your own profile');
+        }
+        return this.usersService.update(+id, updateUserDto);
     }
-    remove(id) {
+    async remove(id) {
         return this.usersService.delete(+id);
+    }
+    async assignRole(id, role) {
+        return this.usersService.assignRole(+id, role);
     }
 };
 exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(role_enum_1.UserRole.SUPER_ADMIN, role_enum_1.UserRole.ADMIN),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.Get)('profile'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getProfile", null);
+__decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(role_enum_1.UserRole.SUPER_ADMIN, role_enum_1.UserRole.ADMIN),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(1000),
+    (0, roles_decorator_1.Roles)(role_enum_1.UserRole.SUPER_ADMIN),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(1000),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(1000),
+    (0, roles_decorator_1.Roles)(role_enum_1.UserRole.SUPER_ADMIN),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('assign-role/:id'),
+    (0, roles_decorator_1.Roles)(role_enum_1.UserRole.SUPER_ADMIN),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('role')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "assignRole", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [users_service_1.UsersService])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map
