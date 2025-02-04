@@ -24,61 +24,50 @@ let NewsService = class NewsService {
         this.categoryRepository = categoryRepository;
     }
     async findAll() {
-        return this.newsRepository.find({
-            relations: {
-                author: true,
-                category: true
-            },
-            where: { isActive: true },
-            order: { createdAt: 'DESC' },
-            select: {
-                id: true,
-                title: true,
-                content: true,
-                imageUrl: true,
-                viewCount: true,
-                createdAt: true,
-                updatedAt: true,
-                isActive: true,
-                author: {
-                    id: true,
-                    fullName: true,
-                    email: true
-                },
-                category: {
-                    id: true,
-                    name: true
-                }
-            }
-        });
+        return this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.isActive = :isActive', { isActive: true })
+            .orderBy('news.createdAt', 'DESC')
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getMany();
     }
     async findOne(id) {
-        const news = await this.newsRepository.findOne({
-            where: { id, isActive: true },
-            relations: {
-                author: true,
-                category: true
-            },
-            select: {
-                id: true,
-                title: true,
-                content: true,
-                imageUrl: true,
-                viewCount: true,
-                createdAt: true,
-                updatedAt: true,
-                isActive: true,
-                author: {
-                    id: true,
-                    fullName: true,
-                    email: true
-                },
-                category: {
-                    id: true,
-                    name: true
-                }
-            }
-        });
+        const news = await this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.id = :id', { id })
+            .andWhere('news.isActive = :isActive', { isActive: true })
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getOne();
         if (!news) {
             throw new common_1.NotFoundException(`News with ID ${id} not found`);
         }

@@ -38,32 +38,35 @@ export class NewsService {
   }
 
   async findOne(id: number): Promise<News> {
-    const news = await this.newsRepository.createQueryBuilder('news')
-      .leftJoinAndSelect('news.author', 'author')
-      .leftJoinAndSelect('news.category', 'category')
-      .where('news.id = :id', { id })
-      .andWhere('news.isActive = :isActive', { isActive: true })
-      .select([
-        'news.id',
-        'news.title',
-        'news.content',
-        'news.imageUrl',
-        'news.viewCount',
-        'news.createdAt',
-        'news.updatedAt',
-        'news.isActive',
-        'author.id',
-        'author.fullName',
-        'author.email',
-        'category.id',
-        'category.name'
-      ])
-      .getOne();
-
+    const news = await this.newsRepository.findOne({
+      where: { id, isActive: true },
+      relations: {
+        author: true,
+        category: true
+      },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        imageUrl: true,
+        viewCount: true,
+        createdAt: true,
+        updatedAt: true,
+        isActive: true,
+        author: {
+          id: true,
+          fullName: true,
+          email: true
+        },
+        category: {
+          id: true,
+          name: true
+        }
+      }
+    });
     if (!news) {
       throw new NotFoundException(`News with ID ${id} not found`);
     }
-
     return news;
   }
 
