@@ -49,6 +49,6 @@ __decorate([
     __metadata("design:type", Number)
 ], UserRoleMapping.prototype, "grantedBy", void 0);
 exports.UserRoleMapping = UserRoleMapping = __decorate([
-    (0, typeorm_1.Entity)('user_role_mappings')
+    (0, typeorm_1.Entity)()
 ], UserRoleMapping);
 //# sourceMappingURL=user-role-mapping.entity.js.map

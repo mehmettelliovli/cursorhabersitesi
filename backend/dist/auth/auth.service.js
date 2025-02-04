@@ -28,19 +28,17 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async validateUser(email, password) {
-        console.log('Validating user with email:', email);
         try {
             const user = await this.userRepository.findOne({
                 where: { email },
-                relations: ['roleMappings']
+                relations: ['userRoleMappings'],
             });
-            console.log('Found user:', user);
             if (!user) {
-                console.log('User not found');
+                console.log('User not found:', email);
                 return null;
             }
             const isPasswordValid = await bcrypt.compare(password, user.password);
-            console.log('Password valid:', isPasswordValid);
+            console.log('Password validation result:', isPasswordValid);
             if (isPasswordValid) {
                 const { password, ...result } = user;
                 return result;
@@ -53,15 +51,23 @@ let AuthService = class AuthService {
         }
     }
     async login(loginData) {
-        console.log('Login attempt for email:', loginData.email);
         try {
-            const user = await this.validateUser(loginData.email, loginData.password);
+            console.log('Login attempt for:', loginData.email);
+            const user = await this.userRepository.findOne({
+                where: { email: loginData.email },
+                relations: ['userRoleMappings'],
+            });
             if (!user) {
-                console.log('User validation failed');
+                console.log('User not found');
                 throw new common_1.UnauthorizedException('Invalid credentials');
             }
-            console.log('User validated successfully:', user);
-            const roles = user.roleMappings
+            const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
+            console.log('Password validation result:', isPasswordValid);
+            if (!isPasswordValid) {
+                console.log('Invalid password');
+                throw new common_1.UnauthorizedException('Invalid credentials');
+            }
+            const roles = user.userRoleMappings
                 ?.filter(mapping => mapping.isActive)
                 .map(mapping => mapping.role) || [];
             console.log('User roles:', roles);
@@ -71,19 +77,18 @@ let AuthService = class AuthService {
                 roles: roles
             };
             const token = this.jwtService.sign(payload);
-            console.log('JWT token generated');
+            console.log('JWT token generated successfully');
+            const { password, ...userData } = user;
             return {
                 access_token: token,
                 user: {
-                    id: user.id,
-                    email: user.email,
-                    fullName: user.fullName,
+                    ...userData,
                     roles: roles
                 }
             };
         }
         catch (error) {
-            console.error('Error in login:', error);
+            console.error('Login error:', error);
             throw new common_1.UnauthorizedException('Login failed');
         }
     }

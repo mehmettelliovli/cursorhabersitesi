@@ -8,10 +8,17 @@ export declare class AuthController {
     }): Promise<{
         access_token: string;
         user: {
-            id: any;
-            email: any;
-            fullName: any;
-            roles: any;
+            roles: import("../entities/role.enum").UserRole[];
+            id: number;
+            email: string;
+            fullName: string;
+            bio: string;
+            profileImage: string;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            news: import("../entities/news.entity").News[];
+            userRoleMappings: import("../entities/user-role-mapping.entity").UserRoleMapping[];
         };
     }>;
     register(registerData: any): Promise<Omit<import("../entities/user.entity").User, "password">>;

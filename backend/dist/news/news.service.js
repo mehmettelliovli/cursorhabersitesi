@@ -25,15 +25,59 @@ let NewsService = class NewsService {
     }
     async findAll() {
         return this.newsRepository.find({
-            relations: ['author', 'category'],
+            relations: {
+                author: true,
+                category: true
+            },
             where: { isActive: true },
             order: { createdAt: 'DESC' },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                imageUrl: true,
+                viewCount: true,
+                createdAt: true,
+                updatedAt: true,
+                isActive: true,
+                author: {
+                    id: true,
+                    fullName: true,
+                    email: true
+                },
+                category: {
+                    id: true,
+                    name: true
+                }
+            }
         });
     }
     async findOne(id) {
         const news = await this.newsRepository.findOne({
             where: { id, isActive: true },
-            relations: ['author', 'category'],
+            relations: {
+                author: true,
+                category: true
+            },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                imageUrl: true,
+                viewCount: true,
+                createdAt: true,
+                updatedAt: true,
+                isActive: true,
+                author: {
+                    id: true,
+                    fullName: true,
+                    email: true
+                },
+                category: {
+                    id: true,
+                    name: true
+                }
+            }
         });
         if (!news) {
             throw new common_1.NotFoundException(`News with ID ${id} not found`);

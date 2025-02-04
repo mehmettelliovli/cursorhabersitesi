@@ -30,10 +30,11 @@ let SeedService = class SeedService {
         this.userRoleMappingRepository = userRoleMappingRepository;
     }
     async seed() {
+        await this.createUsers();
         const categories = await this.createCategories();
-        const users = await this.createUsers();
+        const users = await this.userRepository.find();
         await this.createNews(users, categories);
-        console.log('Seed tamamlandı!');
+        console.log('Seed completed successfully!');
     }
     async createCategories() {
         const categories = [
@@ -59,25 +60,24 @@ let SeedService = class SeedService {
     async createUsers() {
         const users = [
             {
-                email: 'yazar1@example.com',
-                password: 'password123',
-                fullName: 'Ahmet Yazar',
-                role: role_enum_1.UserRole.AUTHOR
+                email: 'admin@example.com',
+                password: 'admin123',
+                fullName: 'Admin User',
+                role: role_enum_1.UserRole.SUPER_ADMIN
             },
             {
-                email: 'yazar2@example.com',
-                password: 'password123',
-                fullName: 'Ayşe Editör',
+                email: 'editor@example.com',
+                password: 'editor123',
+                fullName: 'Editor User',
                 role: role_enum_1.UserRole.EDITOR
             },
             {
-                email: 'yazar3@example.com',
-                password: 'password123',
-                fullName: 'Mehmet Muhabir',
+                email: 'author@example.com',
+                password: 'author123',
+                fullName: 'Author User',
                 role: role_enum_1.UserRole.AUTHOR
             }
         ];
-        const savedUsers = [];
         for (const userData of users) {
             const existingUser = await this.userRepository.findOne({
                 where: { email: userData.email }
@@ -95,53 +95,41 @@ let SeedService = class SeedService {
                     role: userData.role,
                     isActive: true
                 });
-                savedUsers.push(user);
-            }
-            else {
-                savedUsers.push(existingUser);
+                console.log(`Created user: ${userData.email} with role: ${userData.role}`);
             }
         }
-        return savedUsers;
     }
     async createNews(users, categories) {
-        const news = [
+        const newsItems = [
             {
                 title: 'Yapay Zeka Teknolojisinde Çığır Açan Gelişme',
-                content: 'Bilim insanları, insan beyninin çalışma prensiplerini taklit eden yeni bir yapay zeka modeli geliştirdi. Bu gelişme, yapay zekanın geleceği için önemli bir adım olarak görülüyor.',
-                author: users[0],
+                content: 'Bilim insanları, insan beyninin çalışma prensiplerini taklit eden yeni bir yapay zeka modeli geliştirdi...',
                 category: categories[0],
                 imageUrl: 'https://picsum.photos/800/400?random=1'
             },
             {
-                title: 'Süper Lig\'de Şampiyonluk Yarışı Kızışıyor',
-                content: 'Ligin son haftalarına girilirken şampiyonluk yarışı büyük heyecana sahne oluyor. Takımlar arasındaki puan farkı giderek kapanıyor.',
-                author: users[1],
+                title: 'Süper Lig\'de Şampiyonluk Yarışı',
+                content: 'Ligin son haftalarına girilirken şampiyonluk yarışı büyük heyecana sahne oluyor...',
                 category: categories[1],
                 imageUrl: 'https://picsum.photos/800/400?random=2'
             },
             {
-                title: 'Ekonomide Yeni Dönem Başlıyor',
-                content: 'Merkez Bankası\'nın aldığı son kararlar sonrasında ekonomide yeni bir dönemin kapıları aralanıyor. Uzmanlar gelişmeleri değerlendirdi.',
-                author: users[2],
+                title: 'Ekonomide Yeni Dönem',
+                content: 'Merkez Bankası\'nın aldığı son kararlar sonrasında ekonomide yeni bir dönem başlıyor...',
                 category: categories[2],
                 imageUrl: 'https://picsum.photos/800/400?random=3'
-            },
-            {
-                title: 'Sağlıklı Yaşam İçin Önemli İpuçları',
-                content: 'Uzmanlar, günlük hayatta uygulayabileceğimiz basit ama etkili sağlık önerilerini paylaştı. İşte sağlıklı bir yaşam için altın değerinde tavsiyeler.',
-                author: users[0],
-                category: categories[3],
-                imageUrl: 'https://picsum.photos/800/400?random=4'
             }
         ];
-        for (const newsItem of news) {
+        for (const [index, newsItem] of newsItems.entries()) {
             const existingNews = await this.newsRepository.findOne({
                 where: { title: newsItem.title }
             });
             if (!existingNews) {
                 await this.newsRepository.save({
                     ...newsItem,
-                    isActive: true
+                    author: users[index % users.length],
+                    isActive: true,
+                    viewCount: Math.floor(Math.random() * 1000)
                 });
             }
         }

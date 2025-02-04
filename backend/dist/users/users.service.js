@@ -27,14 +27,20 @@ let UsersService = class UsersService {
     }
     async findAll() {
         return this.userRepository.find({
-            relations: ['roleMappings'],
+            relations: {
+                userRoleMappings: true,
+                news: true
+            },
             order: { createdAt: 'DESC' },
         });
     }
     async findOne(id) {
         const user = await this.userRepository.findOne({
             where: { id },
-            relations: ['roleMappings'],
+            relations: {
+                userRoleMappings: true,
+                news: true
+            },
         });
         if (!user) {
             throw new common_1.NotFoundException(`User with ID ${id} not found`);
@@ -44,7 +50,10 @@ let UsersService = class UsersService {
     async findByEmail(email) {
         return this.userRepository.findOne({
             where: { email },
-            relations: ['roleMappings'],
+            relations: {
+                userRoleMappings: true,
+                news: true
+            },
         });
     }
     async create(userData) {

@@ -4,9 +4,17 @@ export declare class AppController {
     constructor(appService: AppService);
     getHello(): string;
     getDashboardStats(): Promise<{
-        newsCount: number;
-        userCount: number;
-        latestNews: import("./entities/news.entity").News[];
-        topAuthors: any[];
+        totalNews: number;
+        totalUsers: number;
+        recentNews: {
+            id: number;
+            title: string;
+            createdAt: Date;
+        }[];
+        topAuthors: {
+            id: any;
+            fullName: any;
+            newsCount: number;
+        }[];
     }>;
 }

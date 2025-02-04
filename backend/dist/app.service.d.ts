@@ -7,9 +7,17 @@ export declare class AppService {
     constructor(newsRepository: Repository<News>, userRepository: Repository<User>);
     getHello(): string;
     getDashboardStats(): Promise<{
-        newsCount: number;
-        userCount: number;
-        latestNews: News[];
-        topAuthors: any[];
+        totalNews: number;
+        totalUsers: number;
+        recentNews: {
+            id: number;
+            title: string;
+            createdAt: Date;
+        }[];
+        topAuthors: {
+            id: any;
+            fullName: any;
+            newsCount: number;
+        }[];
     }>;
 }

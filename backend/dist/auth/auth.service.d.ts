@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UserRoleMapping } from '../entities/user-role-mapping.entity';
+import { UserRole } from '../entities/role.enum';
 export declare class AuthService {
     private readonly userRepository;
     private readonly userRoleMappingRepository;
@@ -14,10 +15,17 @@ export declare class AuthService {
     }): Promise<{
         access_token: string;
         user: {
-            id: any;
-            email: any;
-            fullName: any;
-            roles: any;
+            roles: UserRole[];
+            id: number;
+            email: string;
+            fullName: string;
+            bio: string;
+            profileImage: string;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            news: import("../entities/news.entity").News[];
+            userRoleMappings: UserRoleMapping[];
         };
     }>;
     register(userData: Partial<User>): Promise<Omit<User, 'password'>>;
