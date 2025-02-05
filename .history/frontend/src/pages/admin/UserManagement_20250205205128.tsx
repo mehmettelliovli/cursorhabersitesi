@@ -24,8 +24,6 @@ import {
   InputLabel,
   Select,
   Chip,
-  Switch,
-  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,7 +31,6 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 interface UserRole {
   id: number;
@@ -51,7 +48,6 @@ interface User {
   id: number;
   email: string;
   fullName: string;
-  isActive: boolean;
   roles: Role[];
   createdAt: string;
 }
@@ -73,15 +69,9 @@ const UserManagement = () => {
     email: '',
     fullName: '',
     password: '',
-    isActive: true,
-    roleIds: [] as number[],
+    roleId: '' // Tekli rol seçimi için
   });
   const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error',
-  });
 
   const validateToken = useCallback(async () => {
     try {
@@ -182,8 +172,7 @@ const UserManagement = () => {
         email: user.email,
         fullName: user.fullName,
         password: '',
-        isActive: user.isActive,
-        roleIds: user.roles.map(role => role.id),
+        roleId: user.roles[0]?.id.toString() || '', // İlk rolü al
       });
     } else {
       setSelectedUser(null);
@@ -191,8 +180,7 @@ const UserManagement = () => {
         email: '',
         fullName: '',
         password: '',
-        isActive: true,
-        roleIds: [],
+        roleId: '',
       });
     }
     setOpenDialog(true);
@@ -205,8 +193,7 @@ const UserManagement = () => {
       email: '',
       fullName: '',
       password: '',
-      isActive: true,
-      roleIds: [],
+      roleId: '',
     });
   };
 
@@ -219,7 +206,7 @@ const UserManagement = () => {
       
       const submitData = {
         ...formData,
-        roleIds: formData.roleIds,
+        roleIds: formData.roleId ? [Number(formData.roleId)] : [], // Tekli rolü diziye çevir
         ...(formData.password || !selectedUser ? { password: formData.password } : {})
       };
 
@@ -239,19 +226,9 @@ const UserManagement = () => {
 
       handleCloseDialog();
       fetchData();
-      setSnackbar({
-        open: true,
-        message: selectedUser ? 'Kullanıcı başarıyla güncellendi' : 'Kullanıcı başarıyla oluşturuldu',
-        severity: 'success',
-      });
     } catch (err) {
       console.error('Error saving user:', err);
       setError(err instanceof Error ? err.message : 'Kullanıcı kaydedilirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı kaydedilirken bir hata oluştu',
-        severity: 'error',
-      });
     }
   };
 
@@ -272,54 +249,9 @@ const UserManagement = () => {
       }
 
       fetchData();
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı başarıyla silindi',
-        severity: 'success',
-      });
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Kullanıcı silinirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı silinirken bir hata oluştu',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleToggleActive = async (user: User) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          isActive: !user.isActive
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Durum güncelleme işlemi başarısız');
-      }
-
-      fetchData();
-      setSnackbar({
-        open: true,
-        message: `Kullanıcı ${!user.isActive ? 'aktif' : 'pasif'} duruma getirildi`,
-        severity: 'success',
-      });
-    } catch (err) {
-      console.error('Error toggling user status:', err);
-      setError('Kullanıcı durumu güncellenirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı durumu güncellenirken bir hata oluştu',
-        severity: 'error',
-      });
     }
   };
 
@@ -350,6 +282,11 @@ const UserManagement = () => {
 
   // Kullanıcının SUPER_ADMIN olup olmadığını kontrol et
   const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
+
+  // Düzenleme butonunu sadece SUPER_ADMIN görsün
+  const canEditUser = useCallback((user: User) => {
+    return isSuperAdmin;
+  }, [isSuperAdmin]);
 
   if (loading) {
     return (
@@ -388,7 +325,7 @@ const UserManagement = () => {
               <TableCell>Ad Soyad</TableCell>
               <TableCell>E-posta</TableCell>
               <TableCell>Roller</TableCell>
-              <TableCell>Durum</TableCell>
+              <TableCell>Kayıt Tarihi</TableCell>
               {isSuperAdmin && <TableCell align="right">İşlemler</TableCell>}
             </TableRow>
           </TableHead>
@@ -415,11 +352,7 @@ const UserManagement = () => {
                   ))}
                 </TableCell>
                 <TableCell>
-                  <Switch
-                    checked={user.isActive}
-                    onChange={() => handleToggleActive(user)}
-                    color="primary"
-                  />
+                  {new Date(user.createdAt).toLocaleDateString('tr-TR')}
                 </TableCell>
                 {isSuperAdmin && (
                   <TableCell align="right">
@@ -478,17 +411,16 @@ const UserManagement = () => {
               helperText={selectedUser ? 'Şifreyi değiştirmek için doldurun' : ''}
             />
             <FormControl fullWidth required size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="role-select-label">Kullanıcı Rolleri</InputLabel>
+              <InputLabel id="role-select-label">Kullanıcı Rolü</InputLabel>
               <Select
                 labelId="role-select-label"
-                value={formData.roleIds}
-                label="Kullanıcı Rolleri"
+                value={formData.roleId}
+                label="Kullanıcı Rolü"
                 onChange={(e) => setFormData({
                   ...formData,
-                  roleIds: e.target.value as number[],
+                  roleId: e.target.value as string,
                 })}
                 sx={{ width: '100%' }}
-                multiple
               >
                 {getAvailableRoles().map((role) => (
                   <MenuItem key={role.id} value={role.id}>
@@ -509,26 +441,12 @@ const UserManagement = () => {
             onClick={handleSubmit} 
             variant="contained" 
             color="primary"
-            disabled={!formData.fullName || !formData.email || (!selectedUser && !formData.password) || !formData.roleIds.length}
+            disabled={!formData.fullName || !formData.email || (!selectedUser && !formData.password) || !formData.roleId}
           >
             Kaydet
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };

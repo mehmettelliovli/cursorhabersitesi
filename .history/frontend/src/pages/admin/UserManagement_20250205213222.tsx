@@ -288,41 +288,6 @@ const UserManagement = () => {
     }
   };
 
-  const handleToggleActive = async (user: User) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          isActive: !user.isActive
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Durum güncelleme işlemi başarısız');
-      }
-
-      fetchData();
-      setSnackbar({
-        open: true,
-        message: `Kullanıcı ${!user.isActive ? 'aktif' : 'pasif'} duruma getirildi`,
-        severity: 'success',
-      });
-    } catch (err) {
-      console.error('Error toggling user status:', err);
-      setError('Kullanıcı durumu güncellenirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı durumu güncellenirken bir hata oluştu',
-        severity: 'error',
-      });
-    }
-  };
-
   // Kullanıcının rollerine göre seçilebilecek rolleri belirle
   const getAvailableRoles = useCallback(() => {
     // Eğer roller henüz yüklenmediyse boş array döndür

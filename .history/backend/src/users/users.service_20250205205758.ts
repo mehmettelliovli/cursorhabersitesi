@@ -37,8 +37,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { email, isActive: true },
-      relations: ['roles']
+      where: { email, isActive: true }
     });
   }
 
@@ -93,6 +92,12 @@ export class UsersService {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }
 
+    // Süper admin kontrolü
+    const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      throw new ForbiddenException('Süper admin kullanıcısı düzenlenemez');
+    }
+
     // Rolleri güncelle
     if (userData.roleIds) {
       const roles = await this.roleRepository.findByIds(userData.roleIds);
@@ -119,6 +124,12 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    // Süper admin kontrolü
+    const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      throw new ForbiddenException('Süper admin kullanıcısı silinemez');
     }
 
     await this.userRepository.remove(user);

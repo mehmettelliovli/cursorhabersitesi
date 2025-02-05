@@ -43,22 +43,30 @@ let UsersService = class UsersService {
     }
     async findByEmail(email) {
         return this.userRepository.findOne({
-            where: { email, isActive: true }
+            where: { email, isActive: true },
+            relations: ['roles']
         });
+    }
+    async getRolesByIds(roleIds) {
+        if (!roleIds || !roleIds.length) {
+            return [];
+        }
+        return this.roleRepository.findByIds(roleIds);
+    }
+    async getRoleByName(name) {
+        return this.roleRepository.findOne({ where: { name } });
     }
     async create(userData) {
         const { roleIds, ...rest } = userData;
         let roles = [];
         if (roleIds && Array.isArray(roleIds) && roleIds.length > 0) {
-            roles = await this.roleRepository.findByIds(roleIds);
+            roles = await this.getRolesByIds(roleIds);
             if (!roles.length) {
                 throw new common_1.NotFoundException('Seçilen roller bulunamadı');
             }
         }
         else {
-            const userRole = await this.roleRepository.findOne({
-                where: { name: 'USER' }
-            });
+            const userRole = await this.getRoleByName('USER');
             if (userRole) {
                 roles = [userRole];
             }
@@ -81,10 +89,6 @@ let UsersService = class UsersService {
         if (!user) {
             throw new common_1.NotFoundException('Kullanıcı bulunamadı');
         }
-        const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
-        if (isSuperAdmin) {
-            throw new common_1.ForbiddenException('Süper admin kullanıcısı düzenlenemez');
-        }
         if (userData.roleIds) {
             const roles = await this.roleRepository.findByIds(userData.roleIds);
             if (!roles.length) {
@@ -105,10 +109,6 @@ let UsersService = class UsersService {
         });
         if (!user) {
             throw new common_1.NotFoundException('Kullanıcı bulunamadı');
-        }
-        const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
-        if (isSuperAdmin) {
-            throw new common_1.ForbiddenException('Süper admin kullanıcısı silinemez');
         }
         await this.userRepository.remove(user);
     }

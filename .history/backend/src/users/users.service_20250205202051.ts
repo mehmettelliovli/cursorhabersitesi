@@ -37,8 +37,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { email, isActive: true },
-      relations: ['roles']
+      where: { email, isActive: true }
     });
   }
 
@@ -47,10 +46,6 @@ export class UsersService {
       return [];
     }
     return this.roleRepository.findByIds(roleIds);
-  }
-
-  async getRoleByName(name: string): Promise<Role | null> {
-    return this.roleRepository.findOne({ where: { name } });
   }
 
   async create(userData: DeepPartial<User>): Promise<User> {
@@ -64,7 +59,9 @@ export class UsersService {
       }
     } else {
       // Varsayılan olarak USER rolünü ekle
-      const userRole = await this.getRoleByName('USER');
+      const userRole = await this.roleRepository.findOne({
+        where: { name: 'USER' }
+      });
       if (userRole) {
         roles = [userRole];
       }
@@ -93,6 +90,12 @@ export class UsersService {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }
 
+    // Süper admin kontrolü
+    const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      throw new ForbiddenException('Süper admin kullanıcısı düzenlenemez');
+    }
+
     // Rolleri güncelle
     if (userData.roleIds) {
       const roles = await this.roleRepository.findByIds(userData.roleIds);
@@ -119,6 +122,12 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    // Süper admin kontrolü
+    const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      throw new ForbiddenException('Süper admin kullanıcısı silinemez');
     }
 
     await this.userRepository.remove(user);

@@ -31,13 +31,33 @@ let UsersController = class UsersController {
     findOne(id) {
         return this.usersService.findOne(id);
     }
-    create(createUserDto) {
+    async create(createUserDto, req) {
+        const requestingUserRoles = req.user.roles.map(role => role.name);
+        if (!requestingUserRoles.includes('SUPER_ADMIN')) {
+            const userRole = await this.usersService.getRoleByName('USER');
+            if (!userRole) {
+                throw new common_1.ForbiddenException('USER rolü bulunamadı');
+            }
+            createUserDto.roleIds = [userRole.id];
+        }
         return this.usersService.create(createUserDto);
     }
-    update(id, updateUserDto) {
+    async update(id, updateUserDto, req) {
+        const user = await this.usersService.findOne(id);
+        if (user.email === 'mehmet_developer@hotmail.com') {
+            throw new common_1.ForbiddenException('Bu kullanıcı güncellenemez');
+        }
+        const requestingUserRoles = req.user.roles.map(role => role.name);
+        if (!requestingUserRoles.includes('SUPER_ADMIN') && updateUserDto.roleIds) {
+            throw new common_1.ForbiddenException('Sadece SUPER_ADMIN kullanıcıları rol güncelleyebilir');
+        }
         return this.usersService.update(id, updateUserDto);
     }
-    remove(id) {
+    async remove(id) {
+        const user = await this.usersService.findOne(id);
+        if (user.email === 'mehmet_developer@hotmail.com') {
+            throw new common_1.ForbiddenException('Bu kullanıcı silinemez');
+        }
         return this.usersService.remove(id);
     }
 };
@@ -68,26 +88,28 @@ __decorate([
     (0, common_1.Post)(),
     (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(':id'),
-    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], UsersController.prototype, "remove", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),

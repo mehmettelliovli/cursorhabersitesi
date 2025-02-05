@@ -27,20 +27,26 @@ export class UsersController {
   }
 
   @Post()
-  @Roles('SUPER_ADMIN', 'ADMIN', 'AUTHOR')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async create(@Body() createUserDto: any, @Request() req) {
     const requestingUserRoles = req.user.roles.map(role => role.name);
+    const requestedRoles = createUserDto.roleIds ? await this.usersService.getRolesByIds(createUserDto.roleIds) : [];
     
-    // SUPER_ADMIN değilse, oluşturulan kullanıcıya USER rolü ata
-    if (!requestingUserRoles.includes('SUPER_ADMIN')) {
-      const userRole = await this.usersService.getRoleByName('USER');
-      if (!userRole) {
-        throw new ForbiddenException('USER rolü bulunamadı');
-      }
-      createUserDto.roleIds = [userRole.id];
+    // SUPER_ADMIN her türlü rolü atayabilir
+    if (requestingUserRoles.includes('SUPER_ADMIN')) {
+      return this.usersService.create(createUserDto);
     }
     
-    return this.usersService.create(createUserDto);
+    // ADMIN sadece AUTHOR rolü atayabilir
+    if (requestingUserRoles.includes('ADMIN')) {
+      const hasOnlyAuthorRole = requestedRoles.every(role => role.name === 'AUTHOR');
+      if (!hasOnlyAuthorRole) {
+        throw new ForbiddenException('Admin kullanıcısı sadece AUTHOR rolü atayabilir');
+      }
+      return this.usersService.create(createUserDto);
+    }
+
+    throw new ForbiddenException('Bu işlem için yetkiniz bulunmamaktadır');
   }
 
   @Put(':id')
@@ -50,30 +56,12 @@ export class UsersController {
     @Body() updateUserDto: any,
     @Request() req
   ) {
-    // SUPER_ADMIN kullanıcısını güncellemeye çalışıyorsa kontrol et
-    const user = await this.usersService.findOne(id);
-    if (user.email === 'mehmet_developer@hotmail.com') {
-      throw new ForbiddenException('Bu kullanıcı güncellenemez');
-    }
-
-    // Rol güncellemesi sadece SUPER_ADMIN tarafından yapılabilir
-    const requestingUserRoles = req.user.roles.map(role => role.name);
-    if (!requestingUserRoles.includes('SUPER_ADMIN') && updateUserDto.roleIds) {
-      throw new ForbiddenException('Sadece SUPER_ADMIN kullanıcıları rol güncelleyebilir');
-    }
-
     return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   @Roles('SUPER_ADMIN')
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    // SUPER_ADMIN kullanıcısını silmeye çalışıyorsa kontrol et
-    const user = await this.usersService.findOne(id);
-    if (user.email === 'mehmet_developer@hotmail.com') {
-      throw new ForbiddenException('Bu kullanıcı silinemez');
-    }
-
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }
 } 

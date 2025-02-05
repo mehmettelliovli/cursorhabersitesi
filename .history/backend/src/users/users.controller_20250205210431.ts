@@ -29,16 +29,12 @@ export class UsersController {
   @Post()
   @Roles('SUPER_ADMIN', 'ADMIN', 'AUTHOR')
   async create(@Body() createUserDto: any, @Request() req) {
-    const requestingUserRoles = req.user.roles.map(role => role.name);
-    
-    // SUPER_ADMIN değilse, oluşturulan kullanıcıya USER rolü ata
-    if (!requestingUserRoles.includes('SUPER_ADMIN')) {
-      const userRole = await this.usersService.getRoleByName('USER');
-      if (!userRole) {
-        throw new ForbiddenException('USER rolü bulunamadı');
-      }
-      createUserDto.roleIds = [userRole.id];
+    // Yeni kullanıcılar varsayılan olarak USER rolüne sahip olacak
+    const userRole = await this.usersService.getRoleByName('USER');
+    if (!userRole) {
+      throw new ForbiddenException('USER rolü bulunamadı');
     }
+    createUserDto.roleIds = [userRole.id];
     
     return this.usersService.create(createUserDto);
   }
@@ -54,12 +50,6 @@ export class UsersController {
     const user = await this.usersService.findOne(id);
     if (user.email === 'mehmet_developer@hotmail.com') {
       throw new ForbiddenException('Bu kullanıcı güncellenemez');
-    }
-
-    // Rol güncellemesi sadece SUPER_ADMIN tarafından yapılabilir
-    const requestingUserRoles = req.user.roles.map(role => role.name);
-    if (!requestingUserRoles.includes('SUPER_ADMIN') && updateUserDto.roleIds) {
-      throw new ForbiddenException('Sadece SUPER_ADMIN kullanıcıları rol güncelleyebilir');
     }
 
     return this.usersService.update(id, updateUserDto);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -24,8 +24,6 @@ import {
   InputLabel,
   Select,
   Chip,
-  Switch,
-  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,7 +31,6 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 interface UserRole {
   id: number;
@@ -51,7 +48,6 @@ interface User {
   id: number;
   email: string;
   fullName: string;
-  isActive: boolean;
   roles: Role[];
   createdAt: string;
 }
@@ -73,17 +69,23 @@ const UserManagement = () => {
     email: '',
     fullName: '',
     password: '',
-    isActive: true,
-    roleIds: [] as number[],
+    roleId: '' // Tekli rol seçimi için
   });
   const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error',
-  });
 
-  const validateToken = useCallback(async () => {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/admin/login');
+      return;
+    }
+
+    // Validate token on component mount
+    validateToken();
+    fetchData();
+  }, []);
+
+  const validateToken = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3000/auth/validate-token', {
@@ -111,9 +113,9 @@ const UserManagement = () => {
       localStorage.removeItem('token');
       navigate('/admin/login');
     }
-  }, [navigate]);
+  };
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -122,34 +124,30 @@ const UserManagement = () => {
         throw new Error('No token found');
       }
       
-      // Önce rolleri çekelim
-      const rolesResponse = await fetch('http://localhost:3000/roles', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const [usersResponse, rolesResponse] = await Promise.all([
+        fetch('http://localhost:3000/users', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch('http://localhost:3000/roles', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
 
-      if (!rolesResponse.ok) {
-        throw new Error('Roller yüklenirken hata oluştu');
-      }
-
-      const rolesData = await rolesResponse.json();
-      setRoles(rolesData);
-
-      // Sonra kullanıcıları çekelim
-      const usersResponse = await fetch('http://localhost:3000/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (usersResponse.status === 403) {
+      if (usersResponse.status === 403 || rolesResponse.status === 403) {
         throw new Error('Insufficient permissions');
       }
 
-      if (!usersResponse.ok) {
-        throw new Error('Kullanıcılar yüklenirken hata oluştu');
+      if (!usersResponse.ok || !rolesResponse.ok) {
+        throw new Error('Veri çekme hatası');
       }
 
-      const usersData = await usersResponse.json();
-      setUsers(usersData);
+      const [usersData, rolesData] = await Promise.all([
+        usersResponse.json(),
+        rolesResponse.json()
+      ]);
 
+      setUsers(usersData);
+      setRoles(rolesData);
     } catch (err: unknown) {
       console.error('Error fetching data:', err);
       if (err instanceof Error && err.message === 'Insufficient permissions') {
@@ -161,19 +159,7 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/admin/login');
-      return;
-    }
-
-    // Validate token on component mount
-    validateToken();
-    fetchData();
-  }, [navigate, validateToken, fetchData]);
+  };
 
   const handleOpenDialog = (user?: User) => {
     if (user) {
@@ -182,8 +168,7 @@ const UserManagement = () => {
         email: user.email,
         fullName: user.fullName,
         password: '',
-        isActive: user.isActive,
-        roleIds: user.roles.map(role => role.id),
+        roleId: user.roles[0]?.id.toString() || '', // İlk rolü al
       });
     } else {
       setSelectedUser(null);
@@ -191,8 +176,7 @@ const UserManagement = () => {
         email: '',
         fullName: '',
         password: '',
-        isActive: true,
-        roleIds: [],
+        roleId: '',
       });
     }
     setOpenDialog(true);
@@ -205,8 +189,7 @@ const UserManagement = () => {
       email: '',
       fullName: '',
       password: '',
-      isActive: true,
-      roleIds: [],
+      roleId: '',
     });
   };
 
@@ -219,7 +202,7 @@ const UserManagement = () => {
       
       const submitData = {
         ...formData,
-        roleIds: formData.roleIds,
+        roleIds: formData.roleId ? [Number(formData.roleId)] : [], // Tekli rolü diziye çevir
         ...(formData.password || !selectedUser ? { password: formData.password } : {})
       };
 
@@ -239,19 +222,9 @@ const UserManagement = () => {
 
       handleCloseDialog();
       fetchData();
-      setSnackbar({
-        open: true,
-        message: selectedUser ? 'Kullanıcı başarıyla güncellendi' : 'Kullanıcı başarıyla oluşturuldu',
-        severity: 'success',
-      });
     } catch (err) {
       console.error('Error saving user:', err);
       setError(err instanceof Error ? err.message : 'Kullanıcı kaydedilirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı kaydedilirken bir hata oluştu',
-        severity: 'error',
-      });
     }
   };
 
@@ -272,84 +245,21 @@ const UserManagement = () => {
       }
 
       fetchData();
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı başarıyla silindi',
-        severity: 'success',
-      });
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Kullanıcı silinirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı silinirken bir hata oluştu',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleToggleActive = async (user: User) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          isActive: !user.isActive
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Durum güncelleme işlemi başarısız');
-      }
-
-      fetchData();
-      setSnackbar({
-        open: true,
-        message: `Kullanıcı ${!user.isActive ? 'aktif' : 'pasif'} duruma getirildi`,
-        severity: 'success',
-      });
-    } catch (err) {
-      console.error('Error toggling user status:', err);
-      setError('Kullanıcı durumu güncellenirken bir hata oluştu');
-      setSnackbar({
-        open: true,
-        message: 'Kullanıcı durumu güncellenirken bir hata oluştu',
-        severity: 'error',
-      });
     }
   };
 
   // Kullanıcının rollerine göre seçilebilecek rolleri belirle
-  const getAvailableRoles = useCallback(() => {
-    // Eğer roller henüz yüklenmediyse boş array döndür
-    if (!roles.length) {
-      console.log('Roller henüz yüklenmedi');
-      return [];
-    }
-
-    // Eğer kullanıcı rolleri henüz yüklenmediyse boş array döndür
-    if (!currentUserRoles.length) {
-      console.log('Kullanıcı rolleri henüz yüklenmedi');
-      return [];
-    }
-
-    console.log('Mevcut roller:', roles);
-    console.log('Kullanıcı rolleri:', currentUserRoles);
-
+  const getAvailableRoles = () => {
     if (currentUserRoles.includes('SUPER_ADMIN')) {
       return roles; // Tüm roller
     } else if (currentUserRoles.includes('ADMIN')) {
       return roles.filter(role => role.name === 'AUTHOR'); // Sadece AUTHOR rolü
     }
     return []; // Diğer kullanıcılar için boş array
-  }, [roles, currentUserRoles]); // Bağımlılıkları ekledik
-
-  // Kullanıcının SUPER_ADMIN olup olmadığını kontrol et
-  const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
+  };
 
   if (loading) {
     return (
@@ -388,8 +298,8 @@ const UserManagement = () => {
               <TableCell>Ad Soyad</TableCell>
               <TableCell>E-posta</TableCell>
               <TableCell>Roller</TableCell>
-              <TableCell>Durum</TableCell>
-              {isSuperAdmin && <TableCell align="right">İşlemler</TableCell>}
+              <TableCell>Kayıt Tarihi</TableCell>
+              <TableCell align="right">İşlemler</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -403,38 +313,21 @@ const UserManagement = () => {
                       key={role.id}
                       label={role.name}
                       size="small"
-                      sx={{ 
-                        mr: 0.5, 
-                        mb: 0.5,
-                        bgcolor: role.name === 'SUPER_ADMIN' ? '#f44336' :
-                                role.name === 'ADMIN' ? '#2196f3' :
-                                role.name === 'AUTHOR' ? '#4caf50' : '#757575',
-                        color: 'white'
-                      }}
+                      sx={{ mr: 0.5, mb: 0.5 }}
                     />
                   ))}
                 </TableCell>
                 <TableCell>
-                  <Switch
-                    checked={user.isActive}
-                    onChange={() => handleToggleActive(user)}
-                    color="primary"
-                  />
+                  {new Date(user.createdAt).toLocaleDateString('tr-TR')}
                 </TableCell>
-                {isSuperAdmin && (
-                  <TableCell align="right">
-                    <IconButton onClick={() => handleOpenDialog(user)} color="primary">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handleDelete(user.id)} 
-                      color="error"
-                      disabled={user.roles.some(role => role.name === 'SUPER_ADMIN')}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                )}
+                <TableCell align="right">
+                  <IconButton onClick={() => handleOpenDialog(user)} color="primary">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(user.id)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -446,15 +339,15 @@ const UserManagement = () => {
           {selectedUser ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı Ekle'}
         </DialogTitle>
         <DialogContent>
-          <Box component="form" sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box component="form" sx={{ mt: 2 }}>
             <TextField
               fullWidth
               label="Ad Soyad"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              margin="normal"
               required
               size="small"
-              placeholder="Ad Soyad giriniz"
             />
             <TextField
               fullWidth
@@ -462,9 +355,9 @@ const UserManagement = () => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              margin="normal"
               required
               size="small"
-              placeholder="E-posta giriniz"
             />
             <TextField
               fullWidth
@@ -472,23 +365,20 @@ const UserManagement = () => {
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              margin="normal"
               required={!selectedUser}
               size="small"
-              placeholder="Şifre giriniz"
               helperText={selectedUser ? 'Şifreyi değiştirmek için doldurun' : ''}
             />
-            <FormControl fullWidth required size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="role-select-label">Kullanıcı Rolleri</InputLabel>
+            <FormControl fullWidth margin="normal" required size="small">
+              <InputLabel>Kullanıcı Rolü</InputLabel>
               <Select
-                labelId="role-select-label"
-                value={formData.roleIds}
-                label="Kullanıcı Rolleri"
+                value={formData.roleId}
+                label="Kullanıcı Rolü"
                 onChange={(e) => setFormData({
                   ...formData,
-                  roleIds: e.target.value as number[],
+                  roleId: e.target.value as string,
                 })}
-                sx={{ width: '100%' }}
-                multiple
               >
                 {getAvailableRoles().map((role) => (
                   <MenuItem key={role.id} value={role.id}>
@@ -501,7 +391,7 @@ const UserManagement = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions>
           <Button onClick={handleCloseDialog} variant="outlined" color="secondary">
             İptal
           </Button>
@@ -509,26 +399,12 @@ const UserManagement = () => {
             onClick={handleSubmit} 
             variant="contained" 
             color="primary"
-            disabled={!formData.fullName || !formData.email || (!selectedUser && !formData.password) || !formData.roleIds.length}
+            disabled={!formData.fullName || !formData.email || (!selectedUser && !formData.password) || !formData.roleId}
           >
             Kaydet
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };

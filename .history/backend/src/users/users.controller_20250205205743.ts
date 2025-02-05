@@ -50,16 +50,17 @@ export class UsersController {
     @Body() updateUserDto: any,
     @Request() req
   ) {
-    // SUPER_ADMIN kullanıcısını güncellemeye çalışıyorsa kontrol et
-    const user = await this.usersService.findOne(id);
-    if (user.email === 'mehmet_developer@hotmail.com') {
-      throw new ForbiddenException('Bu kullanıcı güncellenemez');
+    // Sadece SUPER_ADMIN kullanıcıları güncelleyebilir
+    const requestingUserRoles = req.user.roles.map(role => role.name);
+    if (!requestingUserRoles.includes('SUPER_ADMIN')) {
+      throw new ForbiddenException('Sadece SUPER_ADMIN kullanıcıları güncelleyebilir');
     }
 
-    // Rol güncellemesi sadece SUPER_ADMIN tarafından yapılabilir
-    const requestingUserRoles = req.user.roles.map(role => role.name);
-    if (!requestingUserRoles.includes('SUPER_ADMIN') && updateUserDto.roleIds) {
-      throw new ForbiddenException('Sadece SUPER_ADMIN kullanıcıları rol güncelleyebilir');
+    // SUPER_ADMIN kullanıcısını güncellemeye çalışıyorsa kontrol et
+    const user = await this.usersService.findOne(id);
+    if (user.roles.some(role => role.name === 'SUPER_ADMIN') && 
+        user.email === 'mehmet_developer@hotmail.com') {
+      throw new ForbiddenException('SUPER_ADMIN kullanıcısı güncellenemez');
     }
 
     return this.usersService.update(id, updateUserDto);
@@ -70,8 +71,9 @@ export class UsersController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     // SUPER_ADMIN kullanıcısını silmeye çalışıyorsa kontrol et
     const user = await this.usersService.findOne(id);
-    if (user.email === 'mehmet_developer@hotmail.com') {
-      throw new ForbiddenException('Bu kullanıcı silinemez');
+    if (user.roles.some(role => role.name === 'SUPER_ADMIN') && 
+        user.email === 'mehmet_developer@hotmail.com') {
+      throw new ForbiddenException('SUPER_ADMIN kullanıcısı silinemez');
     }
 
     return this.usersService.remove(id);
