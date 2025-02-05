@@ -17,25 +17,27 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../entities/user.entity");
-const role_enum_1 = require("../entities/role.enum");
+const role_entity_1 = require("../entities/role.entity");
 const bcrypt = require("bcrypt");
 let UsersService = class UsersService {
-    constructor(userRepository) {
+    constructor(userRepository, roleRepository) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
     async findAll() {
         return this.userRepository.find({
-            where: { isActive: true },
-            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'role', 'createdAt']
+            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'createdAt'],
+            relations: ['roles']
         });
     }
     async findOne(id) {
         const user = await this.userRepository.findOne({
-            where: { id, isActive: true },
-            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'role', 'createdAt']
+            where: { id },
+            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'createdAt'],
+            relations: ['roles']
         });
         if (!user) {
-            throw new common_1.NotFoundException(`User with ID ${id} not found`);
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
         }
         return user;
     }
@@ -44,49 +46,79 @@ let UsersService = class UsersService {
             where: { email, isActive: true }
         });
     }
-    async create(createUserDto) {
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const user = this.userRepository.create({
-            ...createUserDto,
+    async create(userData) {
+        const { roleIds, ...rest } = userData;
+        let roles = [];
+        if (roleIds && Array.isArray(roleIds) && roleIds.length > 0) {
+            roles = await this.roleRepository.findByIds(roleIds);
+            if (!roles.length) {
+                throw new common_1.NotFoundException('Seçilen roller bulunamadı');
+            }
+        }
+        else {
+            const userRole = await this.roleRepository.findOne({
+                where: { name: 'USER' }
+            });
+            if (userRole) {
+                roles = [userRole];
+            }
+        }
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        const userToCreate = {
+            ...rest,
             password: hashedPassword,
+            roles,
+            isActive: true
+        };
+        const newUser = this.userRepository.create(userToCreate);
+        return await this.userRepository.save(newUser);
+    }
+    async update(id, userData) {
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['roles']
         });
+        if (!user) {
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+        }
+        const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+        if (isSuperAdmin) {
+            throw new common_1.ForbiddenException('Süper admin kullanıcısı düzenlenemez');
+        }
+        if (userData.roleIds) {
+            const roles = await this.roleRepository.findByIds(userData.roleIds);
+            if (!roles.length) {
+                throw new common_1.NotFoundException('Seçilen roller bulunamadı');
+            }
+            user.roles = roles;
+        }
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        Object.assign(user, userData);
         return this.userRepository.save(user);
     }
-    async update(id, updateUserDto) {
-        const user = await this.findOne(id);
+    async remove(id) {
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['roles']
+        });
         if (!user) {
-            throw new common_1.NotFoundException(`User with ID ${id} not found`);
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
         }
-        if (updateUserDto.password) {
-            updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+        const isSuperAdmin = user.roles.some(role => role.name === 'SUPER_ADMIN');
+        if (isSuperAdmin) {
+            throw new common_1.ForbiddenException('Süper admin kullanıcısı silinemez');
         }
-        Object.assign(user, updateUserDto);
-        return this.userRepository.save(user);
-    }
-    async delete(id) {
-        const user = await this.findOne(id);
-        if (!user) {
-            throw new common_1.NotFoundException(`User with ID ${id} not found`);
-        }
-        user.isActive = false;
-        await this.userRepository.save(user);
-    }
-    async assignRole(id, role) {
-        const user = await this.findOne(id);
-        if (!user) {
-            throw new common_1.NotFoundException(`User with ID ${id} not found`);
-        }
-        if (user.role === role_enum_1.UserRole.SUPER_ADMIN) {
-            throw new common_1.UnauthorizedException('Cannot change role of a super admin');
-        }
-        user.role = role;
-        return this.userRepository.save(user);
+        await this.userRepository.remove(user);
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(role_entity_1.Role)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

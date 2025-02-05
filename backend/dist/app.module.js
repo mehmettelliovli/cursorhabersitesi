@@ -16,7 +16,9 @@ const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
 const news_module_1 = require("./news/news.module");
 const category_module_1 = require("./category/category.module");
+const dashboard_module_1 = require("./dashboard/dashboard.module");
 const user_entity_1 = require("./entities/user.entity");
+const role_entity_1 = require("./entities/role.entity");
 const news_entity_1 = require("./entities/news.entity");
 const category_entity_1 = require("./entities/category.entity");
 let AppModule = class AppModule {
@@ -26,24 +28,21 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             config_1.ConfigModule.forRoot(),
-            typeorm_1.TypeOrmModule.forRootAsync({
-                imports: [config_1.ConfigModule],
-                useFactory: (configService) => ({
-                    type: 'postgres',
-                    url: configService.get('DATABASE_URL'),
-                    ssl: {
-                        rejectUnauthorized: false
-                    },
-                    entities: [user_entity_1.User, news_entity_1.News, category_entity_1.Category],
-                    synchronize: true,
-                }),
-                inject: [config_1.ConfigService],
+            typeorm_1.TypeOrmModule.forRoot({
+                type: 'postgres',
+                url: process.env.DATABASE_URL,
+                ssl: {
+                    rejectUnauthorized: false
+                },
+                entities: [user_entity_1.User, role_entity_1.Role, news_entity_1.News, category_entity_1.Category],
+                synchronize: false,
             }),
             typeorm_1.TypeOrmModule.forFeature([news_entity_1.News, user_entity_1.User]),
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             news_module_1.NewsModule,
             category_module_1.CategoryModule,
+            dashboard_module_1.DashboardModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

@@ -6,13 +6,16 @@ export declare class AuthService {
     private readonly jwtService;
     constructor(userRepository: Repository<User>, jwtService: JwtService);
     validateUser(email: string, password: string): Promise<any>;
-    login(user: any): Promise<{
+    login(loginData: {
+        email: string;
+        password: string;
+    }): Promise<{
         access_token: string;
         user: {
             id: any;
             email: any;
             fullName: any;
-            role: any;
+            roles: any;
         };
     }>;
     register(userData: any): Promise<{
@@ -22,7 +25,7 @@ export declare class AuthService {
         bio: string;
         profileImage: string;
         isActive: boolean;
-        role: import("../entities/role.enum").UserRole;
+        roles: import("../entities/role.entity").Role[];
         createdAt: Date;
         updatedAt: Date;
         news: import("../entities/news.entity").News[];

@@ -1,14 +1,14 @@
 import { Repository, DeepPartial } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { UserRole } from '../entities/role.enum';
+import { Role } from '../entities/role.entity';
 export declare class UsersService {
     private readonly userRepository;
-    constructor(userRepository: Repository<User>);
+    private readonly roleRepository;
+    constructor(userRepository: Repository<User>, roleRepository: Repository<Role>);
     findAll(): Promise<Partial<User>[]>;
     findOne(id: number): Promise<User>;
     findByEmail(email: string): Promise<User | null>;
-    create(createUserDto: DeepPartial<User>): Promise<User>;
-    update(id: number, updateUserDto: Partial<User>): Promise<User>;
-    delete(id: number): Promise<void>;
-    assignRole(id: number, role: UserRole): Promise<User>;
+    create(userData: DeepPartial<User>): Promise<User>;
+    update(id: number, userData: any): Promise<User>;
+    remove(id: number): Promise<void>;
 }

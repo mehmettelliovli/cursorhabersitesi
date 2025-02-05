@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const news_entity_1 = require("./news.entity");
-const role_enum_1 = require("./role.enum");
+const role_entity_1 = require("./role.entity");
 let User = class User {
 };
 exports.User = User;
@@ -45,13 +45,14 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "isActive", void 0);
 __decorate([
-    (0, typeorm_1.Column)({
-        type: 'enum',
-        enum: role_enum_1.UserRole,
-        default: role_enum_1.UserRole.AUTHOR
+    (0, typeorm_1.ManyToMany)(() => role_entity_1.Role),
+    (0, typeorm_1.JoinTable)({
+        name: 'user_roles',
+        joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
     }),
-    __metadata("design:type", String)
-], User.prototype, "role", void 0);
+    __metadata("design:type", Array)
+], User.prototype, "roles", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

@@ -4,12 +4,13 @@ exports.initialSeed = void 0;
 const user_entity_1 = require("../../entities/user.entity");
 const news_entity_1 = require("../../entities/news.entity");
 const category_entity_1 = require("../../entities/category.entity");
-const role_enum_1 = require("../../entities/role.enum");
+const role_entity_1 = require("../../entities/role.entity");
 const bcrypt = require("bcrypt");
 const initialSeed = async (dataSource) => {
     const userRepository = dataSource.getRepository(user_entity_1.User);
     const categoryRepository = dataSource.getRepository(category_entity_1.Category);
     const newsRepository = dataSource.getRepository(news_entity_1.News);
+    const roleRepository = dataSource.getRepository(role_entity_1.Role);
     const categories = await categoryRepository.save([
         { name: 'Teknoloji', isActive: true },
         { name: 'Spor', isActive: true },
@@ -17,77 +18,55 @@ const initialSeed = async (dataSource) => {
         { name: 'Sağlık', isActive: true },
         { name: 'Kültür Sanat', isActive: true }
     ]);
-    const superAdminPassword = await bcrypt.hash('mehmet61', 10);
-    let superAdmin = await userRepository.findOne({
-        where: { email: 'mehmet_developer@hotmail.com' }
+    const superAdminRole = await roleRepository.findOne({ where: { name: 'SUPER_ADMIN' } });
+    const adminRole = await roleRepository.findOne({ where: { name: 'ADMIN' } });
+    const authorRole = await roleRepository.findOne({ where: { name: 'AUTHOR' } });
+    const superAdminExists = await userRepository.findOne({
+        where: { email: 'superadmin@example.com' }
     });
-    if (superAdmin) {
-        superAdmin.password = superAdminPassword;
-        superAdmin.role = role_enum_1.UserRole.SUPER_ADMIN;
-        superAdmin.fullName = 'Mehmet Admin';
-        superAdmin.bio = 'Sistem yöneticisi';
-        superAdmin.isActive = true;
-        superAdmin = await userRepository.save(superAdmin);
+    if (!superAdminExists) {
+        const superAdmin = new user_entity_1.User();
+        superAdmin.email = 'superadmin@example.com';
+        superAdmin.fullName = 'Super Admin';
+        superAdmin.password = await bcrypt.hash('superadmin123', 10);
+        superAdmin.roles = [superAdminRole];
+        await userRepository.save(superAdmin);
     }
-    else {
-        superAdmin = await userRepository.save({
-            email: 'mehmet_developer@hotmail.com',
-            password: superAdminPassword,
-            fullName: 'Mehmet Admin',
-            role: role_enum_1.UserRole.SUPER_ADMIN,
-            bio: 'Sistem yöneticisi',
-            isActive: true
-        });
-    }
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    let admin = await userRepository.findOne({
+    const adminExists = await userRepository.findOne({
         where: { email: 'admin@example.com' }
     });
-    if (admin) {
-        admin.password = adminPassword;
-        admin.role = role_enum_1.UserRole.ADMIN;
-        admin.fullName = 'Site Yöneticisi';
-        admin.bio = 'Site içerik yöneticisi';
-        admin.isActive = true;
-        admin = await userRepository.save(admin);
+    if (!adminExists) {
+        const admin = new user_entity_1.User();
+        admin.email = 'admin@example.com';
+        admin.fullName = 'Admin User';
+        admin.password = await bcrypt.hash('admin123', 10);
+        admin.roles = [adminRole];
+        await userRepository.save(admin);
     }
-    else {
-        admin = await userRepository.save({
-            email: 'admin@example.com',
-            password: adminPassword,
-            fullName: 'Site Yöneticisi',
-            role: role_enum_1.UserRole.ADMIN,
-            bio: 'Site içerik yöneticisi',
-            isActive: true
-        });
-    }
-    const authorEmails = ['yazar1@example.com', 'yazar2@example.com'];
-    const authorNames = ['Ali Yazar', 'Ayşe Yazar'];
-    const authorBios = ['Teknoloji ve bilim yazarı', 'Sağlık ve yaşam yazarı'];
-    const authors = [];
-    for (let i = 0; i < authorEmails.length; i++) {
-        let author = await userRepository.findOne({
-            where: { email: authorEmails[i] }
-        });
-        if (author) {
-            author.password = await bcrypt.hash('yazar123', 10);
-            author.role = role_enum_1.UserRole.AUTHOR;
-            author.fullName = authorNames[i];
-            author.bio = authorBios[i];
-            author.isActive = true;
-            author = await userRepository.save(author);
+    const authors = [
+        {
+            email: 'author1@example.com',
+            fullName: 'Yazar Bir',
+            password: 'author123'
+        },
+        {
+            email: 'author2@example.com',
+            fullName: 'Yazar İki',
+            password: 'author123'
         }
-        else {
-            author = await userRepository.save({
-                email: authorEmails[i],
-                password: await bcrypt.hash('yazar123', 10),
-                fullName: authorNames[i],
-                role: role_enum_1.UserRole.AUTHOR,
-                bio: authorBios[i],
-                isActive: true
-            });
+    ];
+    for (const authorData of authors) {
+        const authorExists = await userRepository.findOne({
+            where: { email: authorData.email }
+        });
+        if (!authorExists) {
+            const author = new user_entity_1.User();
+            author.email = authorData.email;
+            author.fullName = authorData.fullName;
+            author.password = await bcrypt.hash(authorData.password, 10);
+            author.roles = [authorRole];
+            await userRepository.save(author);
         }
-        authors.push(author);
     }
     const existingNews = await newsRepository.find();
     if (existingNews.length === 0) {

@@ -27,6 +27,7 @@ let AuthService = class AuthService {
     async validateUser(email, password) {
         const user = await this.userRepository.findOne({
             where: { email, isActive: true },
+            relations: ['roles'],
         });
         if (user && await bcrypt.compare(password, user.password)) {
             const { password, ...result } = user;
@@ -34,19 +35,24 @@ let AuthService = class AuthService {
         }
         return null;
     }
-    async login(user) {
+    async login(loginData) {
+        const user = await this.validateUser(loginData.email, loginData.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
         const payload = {
             email: user.email,
             sub: user.id,
-            role: user.role
+            roles: user.roles.map(role => role.name)
         };
+        const token = this.jwtService.sign(payload);
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: token,
             user: {
                 id: user.id,
                 email: user.email,
                 fullName: user.fullName,
-                role: user.role
+                roles: user.roles.map(role => ({ id: role.id, name: role.name }))
             }
         };
     }
@@ -58,14 +64,14 @@ let AuthService = class AuthService {
             throw new common_1.UnauthorizedException('Email already exists');
         }
         const hashedPassword = await bcrypt.hash(userData.password, 10);
-        const user = this.userRepository.create({
+        const userToCreate = this.userRepository.create({
             ...userData,
             password: hashedPassword,
             isActive: true
         });
-        const savedUser = await this.userRepository.save(user);
-        const userObject = Array.isArray(savedUser) ? savedUser[0] : savedUser;
-        const { password, ...result } = userObject;
+        const savedUser = await this.userRepository.save(userToCreate);
+        const user = Array.isArray(savedUser) ? savedUser[0] : savedUser;
+        const { password: _, ...result } = user;
         return result;
     }
     async validateToken(token) {

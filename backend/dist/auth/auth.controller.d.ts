@@ -11,7 +11,7 @@ export declare class AuthController {
             id: any;
             email: any;
             fullName: any;
-            role: any;
+            roles: any;
         };
     }>;
     register(registerData: any): Promise<{
@@ -21,10 +21,11 @@ export declare class AuthController {
         bio: string;
         profileImage: string;
         isActive: boolean;
-        role: import("../entities/role.enum").UserRole;
+        roles: import("../entities/role.entity").Role[];
         createdAt: Date;
         updatedAt: Date;
         news: import("../entities/news.entity").News[];
     }>;
     getProfile(req: any): any;
+    validateToken(req: any): Promise<any>;
 }
