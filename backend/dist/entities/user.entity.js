@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const news_entity_1 = require("./news.entity");
-const user_role_mapping_entity_1 = require("./user-role-mapping.entity");
+const role_entity_1 = require("./role.entity");
 let User = class User {
 };
 exports.User = User;
@@ -45,6 +45,15 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "isActive", void 0);
 __decorate([
+    (0, typeorm_1.ManyToMany)(() => role_entity_1.Role),
+    (0, typeorm_1.JoinTable)({
+        name: 'user_roles',
+        joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
+    }),
+    __metadata("design:type", Array)
+], User.prototype, "roles", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], User.prototype, "createdAt", void 0);
@@ -56,10 +65,6 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => news_entity_1.News, news => news.author),
     __metadata("design:type", Array)
 ], User.prototype, "news", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => user_role_mapping_entity_1.UserRoleMapping, roleMapping => roleMapping.user),
-    __metadata("design:type", Array)
-], User.prototype, "roleMappings", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

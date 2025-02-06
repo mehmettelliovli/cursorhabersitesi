@@ -14,6 +14,18 @@ export declare class AuthController {
             roles: any;
         };
     }>;
-    register(registerData: any): Promise<Omit<import("../entities/user.entity").User, "password">>;
+    register(registerData: any): Promise<{
+        id: number;
+        email: string;
+        fullName: string;
+        bio: string;
+        profileImage: string;
+        isActive: boolean;
+        roles: import("../entities/role.entity").Role[];
+        createdAt: Date;
+        updatedAt: Date;
+        news: import("../entities/news.entity").News[];
+    }>;
     getProfile(req: any): any;
+    validateToken(req: any): Promise<any>;
 }

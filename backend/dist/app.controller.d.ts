@@ -12,9 +12,9 @@ export declare class AppController {
             createdAt: Date;
         }[];
         topAuthors: {
-            id: number;
-            fullName: string;
-            newsCount: any;
+            id: any;
+            fullName: any;
+            newsCount: number;
         }[];
     }>;
 }

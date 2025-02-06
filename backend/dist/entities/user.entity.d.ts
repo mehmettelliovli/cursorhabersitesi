@@ -1,5 +1,5 @@
 import { News } from './news.entity';
-import { UserRoleMapping } from './user-role-mapping.entity';
+import { Role } from './role.entity';
 export declare class User {
     id: number;
     email: string;
@@ -8,8 +8,8 @@ export declare class User {
     bio: string;
     profileImage: string;
     isActive: boolean;
+    roles: Role[];
     createdAt: Date;
     updatedAt: Date;
     news: News[];
-    roleMappings: UserRoleMapping[];
 }

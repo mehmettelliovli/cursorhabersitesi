@@ -15,34 +15,46 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NewsController = void 0;
 const common_1 = require("@nestjs/common");
 const news_service_1 = require("./news.service");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 let NewsController = class NewsController {
     constructor(newsService) {
         this.newsService = newsService;
     }
-    findAll() {
+    async findAll() {
         return this.newsService.findAll();
     }
-    findMostViewed() {
-        return this.newsService.findMostViewed();
+    async findLatest(limit) {
+        return this.newsService.findLatest(limit);
     }
-    findByCategory(category) {
-        return this.newsService.findByCategory(category);
+    async findMostViewed(limit) {
+        return this.newsService.findMostViewed(limit);
+    }
+    async findByCategory(id) {
+        return this.newsService.findByCategory(id);
     }
     async findOne(id) {
-        const news = await this.newsService.findOne(+id);
-        await this.newsService.incrementViewCount(+id);
+        const news = await this.newsService.findOne(id);
+        await this.newsService.incrementViewCount(id);
         return news;
     }
-    create(newsData, req) {
-        return this.newsService.create(newsData, req.user);
+    async create(createNewsDto, req) {
+        return this.newsService.create(createNewsDto, req.user);
     }
-    update(id, newsData) {
-        return this.newsService.update(+id, newsData);
+    async update(id, updateNewsDto, req) {
+        const news = await this.newsService.findOne(id);
+        if (req.user.roles.some(role => role.name === 'AUTHOR') && news.author.id !== req.user.id) {
+            throw new common_1.UnauthorizedException('You can only update your own news');
+        }
+        return this.newsService.update(id, updateNewsDto);
     }
-    remove(id) {
-        return this.newsService.delete(+id);
+    async remove(id, req) {
+        const news = await this.newsService.findOne(id);
+        if (req.user.roles.some(role => role.name === 'AUTHOR') && news.author.id !== req.user.id) {
+            throw new common_1.UnauthorizedException('You can only delete your own news');
+        }
+        return this.newsService.delete(id);
     }
 };
 exports.NewsController = NewsController;
@@ -50,53 +62,66 @@ __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Get)('most-viewed'),
+    (0, common_1.Get)('latest'),
+    __param(0, (0, common_1.Query)('limit', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "findLatest", null);
+__decorate([
+    (0, common_1.Get)('most-viewed'),
+    __param(0, (0, common_1.Query)('limit', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findMostViewed", null);
 __decorate([
-    (0, common_1.Get)('category/:category'),
-    __param(0, (0, common_1.Param)('category')),
+    (0, common_1.Get)('category/:id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findByCategory", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], NewsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    __param(0, (0, common_1.Param)('id')),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    __param(0, (0, common_1.Param)('id')),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'AUTHOR'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
 ], NewsController.prototype, "remove", null);
 exports.NewsController = NewsController = __decorate([
     (0, common_1.Controller)('news'),

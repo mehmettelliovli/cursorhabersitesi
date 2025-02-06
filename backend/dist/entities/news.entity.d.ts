@@ -1,14 +1,14 @@
 import { User } from './user.entity';
+import { Category } from './category.entity';
 export declare class News {
     id: number;
     title: string;
     content: string;
-    category: string;
-    viewCount: number;
     imageUrl: string;
+    viewCount: number;
     author: User;
-    isPublished: boolean;
+    category: Category;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
-    tags: string[];
 }

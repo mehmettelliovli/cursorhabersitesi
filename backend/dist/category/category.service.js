@@ -22,14 +22,15 @@ let CategoryService = class CategoryService {
         this.categoryRepository = categoryRepository;
     }
     async findAll() {
-        return this.categoryRepository.find();
+        return this.categoryRepository.find({
+            where: { isActive: true },
+            order: { name: 'ASC' },
+        });
     }
     async findOne(id) {
-        const category = await this.categoryRepository.findOne({ where: { id } });
-        if (!category) {
-            throw new common_1.NotFoundException(`Category with ID ${id} not found`);
-        }
-        return category;
+        return this.categoryRepository.findOne({
+            where: { id, isActive: true },
+        });
     }
     async create(categoryData) {
         const category = this.categoryRepository.create(categoryData);
@@ -40,10 +41,7 @@ let CategoryService = class CategoryService {
         return this.findOne(id);
     }
     async delete(id) {
-        const result = await this.categoryRepository.delete(id);
-        if (result.affected === 0) {
-            throw new common_1.NotFoundException(`Category with ID ${id} not found`);
-        }
+        await this.categoryRepository.update(id, { isActive: false });
     }
 };
 exports.CategoryService = CategoryService;

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.News = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("./user.entity");
+const category_entity_1 = require("./category.entity");
 let News = class News {
 };
 exports.News = News;
@@ -28,25 +29,25 @@ __decorate([
     __metadata("design:type", String)
 ], News.prototype, "content", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
-], News.prototype, "category", void 0);
+], News.prototype, "imageUrl", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)
 ], News.prototype, "viewCount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], News.prototype, "imageUrl", void 0);
-__decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.news),
     __metadata("design:type", user_entity_1.User)
 ], News.prototype, "author", void 0);
 __decorate([
+    (0, typeorm_1.ManyToOne)(() => category_entity_1.Category, category => category.news),
+    __metadata("design:type", category_entity_1.Category)
+], News.prototype, "category", void 0);
+__decorate([
     (0, typeorm_1.Column)({ default: true }),
     __metadata("design:type", Boolean)
-], News.prototype, "isPublished", void 0);
+], News.prototype, "isActive", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
@@ -55,10 +56,6 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], News.prototype, "updatedAt", void 0);
-__decorate([
-    (0, typeorm_1.Column)('text', { array: true, default: [] }),
-    __metadata("design:type", Array)
-], News.prototype, "tags", void 0);
 exports.News = News = __decorate([
     (0, typeorm_1.Entity)('news')
 ], News);

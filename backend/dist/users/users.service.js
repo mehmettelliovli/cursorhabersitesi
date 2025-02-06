@@ -17,69 +17,107 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../entities/user.entity");
-const user_role_mapping_entity_1 = require("../entities/user-role-mapping.entity");
+const role_entity_1 = require("../entities/role.entity");
+const bcrypt = require("bcrypt");
 let UsersService = class UsersService {
-    constructor(userRepository, userRoleMappingRepository) {
+    constructor(userRepository, roleRepository) {
         this.userRepository = userRepository;
-        this.userRoleMappingRepository = userRoleMappingRepository;
+        this.roleRepository = roleRepository;
     }
     async findAll() {
         return this.userRepository.find({
-            relations: ['roleMappings'],
+            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'createdAt'],
+            relations: ['roles']
         });
     }
     async findOne(id) {
-        return this.userRepository.findOne({
+        const user = await this.userRepository.findOne({
             where: { id },
-            relations: ['roleMappings'],
+            select: ['id', 'fullName', 'email', 'profileImage', 'bio', 'createdAt'],
+            relations: ['roles']
         });
+        if (!user) {
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+        }
+        return user;
     }
     async findByEmail(email) {
         return this.userRepository.findOne({
-            where: { email },
-            relations: ['roleMappings'],
+            where: { email, isActive: true },
+            relations: ['roles']
         });
+    }
+    async getRolesByIds(roleIds) {
+        if (!roleIds || !roleIds.length) {
+            return [];
+        }
+        return this.roleRepository.findByIds(roleIds);
+    }
+    async getRoleByName(name) {
+        return this.roleRepository.findOne({ where: { name } });
     }
     async create(userData) {
-        const user = this.userRepository.create(userData);
-        return this.userRepository.save(user);
+        const { roleIds, ...rest } = userData;
+        let roles = [];
+        if (roleIds && Array.isArray(roleIds) && roleIds.length > 0) {
+            roles = await this.getRolesByIds(roleIds);
+            if (!roles.length) {
+                throw new common_1.NotFoundException('Seçilen roller bulunamadı');
+            }
+        }
+        else {
+            const userRole = await this.getRoleByName('USER');
+            if (userRole) {
+                roles = [userRole];
+            }
+        }
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        const userToCreate = {
+            ...rest,
+            password: hashedPassword,
+            roles,
+            isActive: true
+        };
+        const newUser = this.userRepository.create(userToCreate);
+        return await this.userRepository.save(newUser);
     }
     async update(id, userData) {
-        await this.userRepository.update(id, userData);
-        return this.findOne(id);
-    }
-    async delete(id) {
-        await this.userRepository.delete(id);
-    }
-    async addRole(userId, role, grantedBy) {
-        const user = await this.findOne(userId);
-        if (!user) {
-            throw new Error('User not found');
-        }
-        const roleMapping = this.userRoleMappingRepository.create({
-            user,
-            role,
-            isActive: true,
-            grantedBy,
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['roles']
         });
-        await this.userRoleMappingRepository.save(roleMapping);
-    }
-    async removeRole(userId, role) {
-        const user = await this.findOne(userId);
         if (!user) {
-            throw new Error('User not found');
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
         }
-        await this.userRoleMappingRepository.delete({
-            user: { id: userId },
-            role,
+        if (userData.roleIds) {
+            const roles = await this.roleRepository.findByIds(userData.roleIds);
+            if (!roles.length) {
+                throw new common_1.NotFoundException('Seçilen roller bulunamadı');
+            }
+            user.roles = roles;
+        }
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        Object.assign(user, userData);
+        return this.userRepository.save(user);
+    }
+    async remove(id) {
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['roles']
         });
+        if (!user) {
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+        }
+        await this.userRepository.remove(user);
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(1, (0, typeorm_1.InjectRepository)(user_role_mapping_entity_1.UserRoleMapping)),
+    __param(1, (0, typeorm_1.InjectRepository)(role_entity_1.Role)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository])
 ], UsersService);

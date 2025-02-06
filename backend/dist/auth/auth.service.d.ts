@@ -1,12 +1,10 @@
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { UserRoleMapping } from '../entities/user-role-mapping.entity';
 export declare class AuthService {
     private readonly userRepository;
-    private readonly userRoleMappingRepository;
     private readonly jwtService;
-    constructor(userRepository: Repository<User>, userRoleMappingRepository: Repository<UserRoleMapping>, jwtService: JwtService);
+    constructor(userRepository: Repository<User>, jwtService: JwtService);
     validateUser(email: string, password: string): Promise<any>;
     login(loginData: {
         email: string;
@@ -20,6 +18,17 @@ export declare class AuthService {
             roles: any;
         };
     }>;
-    register(userData: Partial<User>): Promise<Omit<User, 'password'>>;
+    register(userData: any): Promise<{
+        id: number;
+        email: string;
+        fullName: string;
+        bio: string;
+        profileImage: string;
+        isActive: boolean;
+        roles: import("../entities/role.entity").Role[];
+        createdAt: Date;
+        updatedAt: Date;
+        news: import("../entities/news.entity").News[];
+    }>;
     validateToken(token: string): Promise<any>;
 }

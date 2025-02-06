@@ -18,74 +18,43 @@ const jwt_1 = require("@nestjs/jwt");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../entities/user.entity");
-const user_role_mapping_entity_1 = require("../entities/user-role-mapping.entity");
-const role_enum_1 = require("../entities/role.enum");
 const bcrypt = require("bcrypt");
 let AuthService = class AuthService {
-    constructor(userRepository, userRoleMappingRepository, jwtService) {
+    constructor(userRepository, jwtService) {
         this.userRepository = userRepository;
-        this.userRoleMappingRepository = userRoleMappingRepository;
         this.jwtService = jwtService;
     }
     async validateUser(email, password) {
-        console.log('Validating user with email:', email);
-        try {
-            const user = await this.userRepository.findOne({
-                where: { email },
-                relations: ['roleMappings']
-            });
-            console.log('Found user:', user);
-            if (!user) {
-                console.log('User not found');
-                return null;
-            }
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            console.log('Password valid:', isPasswordValid);
-            if (isPasswordValid) {
-                const { password, ...result } = user;
-                return result;
-            }
-            return null;
+        const user = await this.userRepository.findOne({
+            where: { email, isActive: true },
+            relations: ['roles'],
+        });
+        if (user && await bcrypt.compare(password, user.password)) {
+            const { password, ...result } = user;
+            return result;
         }
-        catch (error) {
-            console.error('Error in validateUser:', error);
-            return null;
-        }
+        return null;
     }
     async login(loginData) {
-        console.log('Login attempt for email:', loginData.email);
-        try {
-            const user = await this.validateUser(loginData.email, loginData.password);
-            if (!user) {
-                console.log('User validation failed');
-                throw new common_1.UnauthorizedException('Invalid credentials');
-            }
-            console.log('User validated successfully:', user);
-            const roles = user.roleMappings
-                ?.filter(mapping => mapping.isActive)
-                .map(mapping => mapping.role) || [];
-            console.log('User roles:', roles);
-            const payload = {
+        const user = await this.validateUser(loginData.email, loginData.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        const payload = {
+            email: user.email,
+            sub: user.id,
+            roles: user.roles.map(role => role.name)
+        };
+        const token = this.jwtService.sign(payload);
+        return {
+            access_token: token,
+            user: {
+                id: user.id,
                 email: user.email,
-                sub: user.id,
-                roles: roles
-            };
-            const token = this.jwtService.sign(payload);
-            console.log('JWT token generated');
-            return {
-                access_token: token,
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    fullName: user.fullName,
-                    roles: roles
-                }
-            };
-        }
-        catch (error) {
-            console.error('Error in login:', error);
-            throw new common_1.UnauthorizedException('Login failed');
-        }
+                fullName: user.fullName,
+                roles: user.roles.map(role => ({ id: role.id, name: role.name }))
+            }
+        };
     }
     async register(userData) {
         const existingUser = await this.userRepository.findOne({
@@ -95,20 +64,15 @@ let AuthService = class AuthService {
             throw new common_1.UnauthorizedException('Email already exists');
         }
         const hashedPassword = await bcrypt.hash(userData.password, 10);
-        const newUser = this.userRepository.create({
+        const userToCreate = this.userRepository.create({
             ...userData,
             password: hashedPassword,
-            isActive: true,
-        });
-        const savedUser = await this.userRepository.save(newUser);
-        const roleMapping = this.userRoleMappingRepository.create({
-            user: savedUser,
-            role: role_enum_1.UserRole.USER,
             isActive: true
         });
-        await this.userRoleMappingRepository.save(roleMapping);
-        const { password, ...resultObject } = savedUser;
-        return resultObject;
+        const savedUser = await this.userRepository.save(userToCreate);
+        const user = Array.isArray(savedUser) ? savedUser[0] : savedUser;
+        const { password: _, ...result } = user;
+        return result;
     }
     async validateToken(token) {
         try {
@@ -123,9 +87,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(1, (0, typeorm_1.InjectRepository)(user_role_mapping_entity_1.UserRoleMapping)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
         jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

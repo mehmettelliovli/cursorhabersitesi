@@ -17,66 +17,170 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const news_entity_1 = require("../entities/news.entity");
+const category_entity_1 = require("../entities/category.entity");
 let NewsService = class NewsService {
-    constructor(newsRepository) {
+    constructor(newsRepository, categoryRepository) {
         this.newsRepository = newsRepository;
+        this.categoryRepository = categoryRepository;
     }
     async findAll() {
-        return this.newsRepository.find({
-            relations: ['author'],
-            order: { createdAt: 'DESC' },
-        });
+        return this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.isActive = :isActive', { isActive: true })
+            .orderBy('news.createdAt', 'DESC')
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getMany();
     }
     async findOne(id) {
-        const news = await this.newsRepository.findOne({
-            where: { id },
-            relations: ['author'],
-        });
+        const news = await this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.id = :id', { id })
+            .andWhere('news.isActive = :isActive', { isActive: true })
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getOne();
         if (!news) {
             throw new common_1.NotFoundException(`News with ID ${id} not found`);
         }
         return news;
     }
     async create(newsData, author) {
-        const newNews = this.newsRepository.create({
-            ...newsData,
-            author,
+        const { categoryId, ...rest } = newsData;
+        const category = await this.categoryRepository.findOne({
+            where: { id: categoryId }
         });
+        if (!category) {
+            throw new common_1.NotFoundException(`Category with ID ${categoryId} not found`);
+        }
+        const newsToCreate = {
+            ...rest,
+            category,
+            author,
+            isActive: true,
+            viewCount: 0
+        };
+        const newNews = this.newsRepository.create(newsToCreate);
         const savedNews = await this.newsRepository.save(newNews);
-        return Array.isArray(savedNews) ? savedNews[0] : savedNews;
+        return this.findOne(savedNews.id);
     }
     async update(id, newsData) {
-        await this.newsRepository.update(id, newsData);
+        const { categoryId, ...rest } = newsData;
+        if (categoryId) {
+            const category = await this.categoryRepository.findOne({
+                where: { id: categoryId }
+            });
+            if (!category) {
+                throw new common_1.NotFoundException(`Category with ID ${categoryId} not found`);
+            }
+            rest.category = category;
+        }
+        await this.newsRepository.update(id, rest);
         return this.findOne(id);
     }
     async delete(id) {
-        const result = await this.newsRepository.delete(id);
-        if (result.affected === 0) {
+        const news = await this.newsRepository.findOne({
+            where: { id, isActive: true }
+        });
+        if (!news) {
             throw new common_1.NotFoundException(`News with ID ${id} not found`);
         }
+        news.isActive = false;
+        await this.newsRepository.save(news);
     }
-    async findMostViewed() {
+    async findMostViewed(limit = 5) {
         return this.newsRepository.find({
-            relations: ['author'],
+            where: { isActive: true },
+            relations: ['author', 'category'],
             order: { viewCount: 'DESC' },
-            take: 10,
+            take: limit,
         });
     }
-    async findByCategory(category) {
+    async findByCategory(categoryId) {
         return this.newsRepository.find({
-            where: { category },
-            relations: ['author'],
+            where: {
+                category: { id: categoryId },
+                isActive: true
+            },
+            relations: ['author', 'category'],
             order: { createdAt: 'DESC' },
         });
     }
     async incrementViewCount(id) {
-        await this.newsRepository.increment({ id }, 'viewCount', 1);
+        const news = await this.newsRepository.findOne({
+            where: { id }
+        });
+        if (news) {
+            news.viewCount += 1;
+            await this.newsRepository.save(news);
+        }
+    }
+    async findLatest(limit = 5) {
+        return this.newsRepository.find({
+            where: { isActive: true },
+            relations: ['author', 'category'],
+            order: { createdAt: 'DESC' },
+            take: limit,
+        });
+    }
+    async findByAuthor(authorId) {
+        return this.newsRepository.createQueryBuilder('news')
+            .leftJoinAndSelect('news.author', 'author')
+            .leftJoinAndSelect('news.category', 'category')
+            .where('news.isActive = :isActive', { isActive: true })
+            .andWhere('author.id = :authorId', { authorId })
+            .select([
+            'news.id',
+            'news.title',
+            'news.content',
+            'news.imageUrl',
+            'news.viewCount',
+            'news.createdAt',
+            'news.updatedAt',
+            'news.isActive',
+            'author.id',
+            'author.fullName',
+            'author.email',
+            'category.id',
+            'category.name'
+        ])
+            .getMany();
     }
 };
 exports.NewsService = NewsService;
 exports.NewsService = NewsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(news_entity_1.News)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(category_entity_1.Category)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], NewsService);
 //# sourceMappingURL=news.service.js.map

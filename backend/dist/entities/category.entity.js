@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Category = void 0;
 const typeorm_1 = require("typeorm");
+const news_entity_1 = require("./news.entity");
 let Category = class Category {
 };
 exports.Category = Category;
@@ -19,7 +20,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Category.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], Category.prototype, "name", void 0);
 __decorate([
@@ -30,6 +31,10 @@ __decorate([
     (0, typeorm_1.Column)({ default: true }),
     __metadata("design:type", Boolean)
 ], Category.prototype, "isActive", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => news_entity_1.News, news => news.category),
+    __metadata("design:type", Array)
+], Category.prototype, "news", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)

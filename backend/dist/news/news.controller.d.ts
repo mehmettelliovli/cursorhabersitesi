@@ -1,12 +1,13 @@
 import { NewsService } from './news.service';
 export declare class NewsController {
-    private newsService;
+    private readonly newsService;
     constructor(newsService: NewsService);
     findAll(): Promise<import("../entities/news.entity").News[]>;
-    findMostViewed(): Promise<import("../entities/news.entity").News[]>;
-    findByCategory(category: string): Promise<import("../entities/news.entity").News[]>;
-    findOne(id: string): Promise<import("../entities/news.entity").News>;
-    create(newsData: any, req: any): Promise<import("../entities/news.entity").News>;
-    update(id: string, newsData: any): Promise<import("../entities/news.entity").News>;
-    remove(id: string): Promise<void>;
+    findLatest(limit?: number): Promise<import("../entities/news.entity").News[]>;
+    findMostViewed(limit?: number): Promise<import("../entities/news.entity").News[]>;
+    findByCategory(id: number): Promise<import("../entities/news.entity").News[]>;
+    findOne(id: number): Promise<import("../entities/news.entity").News>;
+    create(createNewsDto: any, req: any): Promise<import("../entities/news.entity").News>;
+    update(id: number, updateNewsDto: any, req: any): Promise<import("../entities/news.entity").News>;
+    remove(id: number, req: any): Promise<void>;
 }
