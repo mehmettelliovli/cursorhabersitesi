@@ -195,7 +195,7 @@ export class NewsService {
       },
       relations: ['author', 'category'],
       order: { createdAt: 'DESC' },
-      take: 5, // Sabit 5 haber
+      take: limit,
     });
   }
 

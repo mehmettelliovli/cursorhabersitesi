@@ -70,7 +70,7 @@ export default function Home() {
         axios.get('http://localhost:3000/news')
       ]);
 
-      setLatestNews(latestResponse.data.slice(0, 5));
+      setLatestNews(latestResponse.data);
       setMostViewedNews(mostViewedResponse.data);
       
       // Rastgele 6 haber seç
@@ -177,58 +177,25 @@ export default function Home() {
                       color: 'inherit',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                      },
-                      py: 2,
+                      }
                     }}
                   >
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={2}>
-                        <Typography variant="h6" color="primary">
-                          {index + 1}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={3}>
-                        <Box
-                          component="img"
-                          src={news.imageUrl}
-                          alt={news.title}
-                          sx={{
-                            width: '100%',
-                            height: '60px',
-                            objectFit: 'cover',
-                            borderRadius: 1,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={7}>
-                        <ListItemText
-                          primary={
-                            <Typography
-                              variant="subtitle2"
-                              sx={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                lineHeight: '1.2em',
-                                maxHeight: '2.4em',
-                              }}
-                            >
-                              {news.title}
-                            </Typography>
-                          }
-                          secondary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                              <VisibilityIcon fontSize="small" />
-                              <Typography variant="caption">
-                                {news.viewCount} görüntülenme
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </Grid>
-                    </Grid>
+                    <Box sx={{ mr: 2, minWidth: '24px' }}>
+                      <Typography variant="h6" color="primary">
+                        {index + 1}
+                      </Typography>
+                    </Box>
+                    <ListItemText
+                      primary={news.title}
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <VisibilityIcon fontSize="small" />
+                          <Typography variant="caption">
+                            {news.viewCount} görüntülenme
+                          </Typography>
+                        </Box>
+                      }
+                    />
                   </ListItem>
                   {index < mostViewedNews.length - 1 && <Divider />}
                 </div>

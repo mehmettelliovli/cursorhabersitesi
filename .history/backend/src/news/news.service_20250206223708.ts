@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial, MoreThanOrEqual } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { News } from '../entities/news.entity';
 import { Category } from '../entities/category.entity';
 
@@ -125,14 +125,8 @@ export class NewsService {
   }
 
   async findMostViewed(limit: number = 5): Promise<News[]> {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
     return this.newsRepository.find({
-      where: { 
-        isActive: true,
-        createdAt: MoreThanOrEqual(oneMonthAgo)
-      },
+      where: { isActive: true },
       relations: ['author', 'category'],
       order: { viewCount: 'DESC' },
       take: limit,
@@ -195,19 +189,15 @@ export class NewsService {
       },
       relations: ['author', 'category'],
       order: { createdAt: 'DESC' },
-      take: 5, // Sabit 5 haber
+      take: limit,
     });
   }
 
   async findByCategoryMostViewed(categoryId: number, limit: number = 5): Promise<News[]> {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
     return this.newsRepository.find({
       where: { 
         category: { id: categoryId },
-        isActive: true,
-        createdAt: MoreThanOrEqual(oneMonthAgo)
+        isActive: true 
       },
       relations: ['author', 'category'],
       order: { viewCount: 'DESC' },

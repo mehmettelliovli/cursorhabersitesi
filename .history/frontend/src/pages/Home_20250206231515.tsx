@@ -70,7 +70,7 @@ export default function Home() {
         axios.get('http://localhost:3000/news')
       ]);
 
-      setLatestNews(latestResponse.data.slice(0, 5));
+      setLatestNews(latestResponse.data);
       setMostViewedNews(mostViewedResponse.data);
       
       // Rastgele 6 haber seç

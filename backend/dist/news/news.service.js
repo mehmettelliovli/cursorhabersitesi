@@ -117,8 +117,13 @@ let NewsService = class NewsService {
         await this.newsRepository.save(news);
     }
     async findMostViewed(limit = 5) {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         return this.newsRepository.find({
-            where: { isActive: true },
+            where: {
+                isActive: true,
+                createdAt: (0, typeorm_2.MoreThanOrEqual)(oneMonthAgo)
+            },
             relations: ['author', 'category'],
             order: { viewCount: 'DESC' },
             take: limit,
@@ -135,13 +140,7 @@ let NewsService = class NewsService {
         });
     }
     async incrementViewCount(id) {
-        const news = await this.newsRepository.findOne({
-            where: { id }
-        });
-        if (news) {
-            news.viewCount += 1;
-            await this.newsRepository.save(news);
-        }
+        await this.newsRepository.increment({ id }, 'viewCount', 1);
     }
     async findLatest(limit = 5) {
         return this.newsRepository.find({
@@ -173,6 +172,42 @@ let NewsService = class NewsService {
             'category.name'
         ])
             .getMany();
+    }
+    async findByCategoryLatest(categoryId, limit = 5) {
+        return this.newsRepository.find({
+            where: {
+                category: { id: categoryId },
+                isActive: true
+            },
+            relations: ['author', 'category'],
+            order: { createdAt: 'DESC' },
+            take: 5,
+        });
+    }
+    async findByCategoryMostViewed(categoryId, limit = 5) {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return this.newsRepository.find({
+            where: {
+                category: { id: categoryId },
+                isActive: true,
+                createdAt: (0, typeorm_2.MoreThanOrEqual)(oneMonthAgo)
+            },
+            relations: ['author', 'category'],
+            order: { viewCount: 'DESC' },
+            take: limit,
+        });
+    }
+    async findByCategoryOlder(categoryId) {
+        return this.newsRepository.find({
+            where: {
+                category: { id: categoryId },
+                isActive: true
+            },
+            relations: ['author', 'category'],
+            order: { createdAt: 'ASC' },
+            take: 20,
+        });
     }
 };
 exports.NewsService = NewsService;
