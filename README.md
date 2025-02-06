@@ -1,1 +1,1 @@
-# cursorhabersitesi
+# habersitesi
