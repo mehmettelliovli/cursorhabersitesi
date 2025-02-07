@@ -10,4 +10,7 @@ export declare class NewsController {
     create(createNewsDto: any, req: any): Promise<import("../entities/news.entity").News>;
     update(id: number, updateNewsDto: any, req: any): Promise<import("../entities/news.entity").News>;
     remove(id: number, req: any): Promise<void>;
+    findByCategoryLatest(id: number, limit?: number): Promise<import("../entities/news.entity").News[]>;
+    findByCategoryMostViewed(id: number, limit?: number): Promise<import("../entities/news.entity").News[]>;
+    findByCategoryOlder(id: number): Promise<import("../entities/news.entity").News[]>;
 }

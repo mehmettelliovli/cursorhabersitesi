@@ -16,9 +16,9 @@ import {
   Divider,
   CardActionArea,
 } from '@mui/material';
-import { Visibility as VisibilityIcon } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Visibility as VisibilityIcon } from '@mui/icons-material';
 
 // Import Swiper React components
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -48,42 +48,44 @@ interface News {
   createdAt: string;
 }
 
-export default function Home() {
+export default function CategoryNews() {
+  const { categoryId } = useParams();
+  const [categoryName, setCategoryName] = useState('');
   const [latestNews, setLatestNews] = useState<News[]>([]);
   const [mostViewedNews, setMostViewedNews] = useState<News[]>([]);
-  const [randomNews, setRandomNews] = useState<News[]>([]);
+  const [olderNews, setOlderNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAllNews();
-  }, []);
+    const fetchCategoryNews = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const fetchAllNews = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const [latestResponse, mostViewedResponse, allNewsResponse] = await Promise.all([
-        axios.get('http://localhost:3000/news/latest?limit=5'),
-        axios.get('http://localhost:3000/news/most-viewed?limit=5'),
-        axios.get('http://localhost:3000/news')
-      ]);
+        const [categoryResponse, latestResponse, mostViewedResponse, olderResponse] = await Promise.all([
+          axios.get(`http://localhost:3000/categories/${categoryId}`),
+          axios.get(`http://localhost:3000/news/category/${categoryId}/latest?limit=5`),
+          axios.get(`http://localhost:3000/news/category/${categoryId}/most-viewed?limit=5`),
+          axios.get(`http://localhost:3000/news/category/${categoryId}/older`)
+        ]);
 
-      setLatestNews(latestResponse.data.slice(0, 5));
-      setMostViewedNews(mostViewedResponse.data);
-      
-      // Rastgele 6 haber seç
-      const shuffled = allNewsResponse.data.sort(() => 0.5 - Math.random());
-      setRandomNews(shuffled.slice(0, 6));
-      
-    } catch (err) {
-      console.error('Haberler yüklenirken hata:', err);
-      setError('Haberler yüklenirken bir hata oluştu');
-    } finally {
-      setLoading(false);
+        setCategoryName(categoryResponse.data.name);
+        setLatestNews(latestResponse.data);
+        setMostViewedNews(mostViewedResponse.data);
+        setOlderNews(olderResponse.data);
+      } catch (err) {
+        console.error('Kategori haberleri yüklenirken hata:', err);
+        setError('Haberler yüklenirken bir hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (categoryId) {
+      fetchCategoryNews();
     }
-  };
+  }, [categoryId]);
 
   if (loading) {
     return (
@@ -106,7 +108,7 @@ export default function Home() {
   return (
     <Container sx={{ mt: 4 }}>
       <Grid container spacing={3}>
-        {/* Sol taraf - Slider */}
+        {/* Sol taraf - En son eklenen haberler */}
         <Grid item xs={12} md={8}>
           <Typography variant="h5" gutterBottom>
             Son Eklenen Haberler
@@ -169,11 +171,11 @@ export default function Home() {
             <List>
               {mostViewedNews.map((news, index) => (
                 <div key={news.id}>
-                  <ListItem 
-                    component={Link} 
+                  <ListItem
+                    component={Link}
                     to={`/news/${news.id}`}
-                    sx={{ 
-                      textDecoration: 'none', 
+                    sx={{
+                      textDecoration: 'none',
                       color: 'inherit',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
@@ -237,13 +239,13 @@ export default function Home() {
           </Paper>
         </Grid>
 
-        {/* Alt kısım - Rastgele Haberler */}
+        {/* Alt kısım - Eski Haberler */}
         <Grid item xs={12}>
           <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-            Diğer Haberler
+            Eski Haberler
           </Typography>
           <Grid container spacing={3}>
-            {randomNews.map((news) => (
+            {olderNews.map((news) => (
               <Grid item xs={12} sm={6} md={4} key={news.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardActionArea component={Link} to={`/news/${news.id}`}>
@@ -262,9 +264,6 @@ export default function Home() {
                         {news.content.substring(0, 100)}...
                       </Typography>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {news.category.name}
-                        </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {new Date(news.createdAt).toLocaleDateString('tr-TR')}
                         </Typography>

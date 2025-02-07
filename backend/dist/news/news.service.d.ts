@@ -15,4 +15,7 @@ export declare class NewsService {
     incrementViewCount(id: number): Promise<void>;
     findLatest(limit?: number): Promise<News[]>;
     findByAuthor(authorId: number): Promise<News[]>;
+    findByCategoryLatest(categoryId: number, limit?: number): Promise<News[]>;
+    findByCategoryMostViewed(categoryId: number, limit?: number): Promise<News[]>;
+    findByCategoryOlder(categoryId: number): Promise<News[]>;
 }

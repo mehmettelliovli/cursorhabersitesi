@@ -56,6 +56,15 @@ let NewsController = class NewsController {
         }
         return this.newsService.delete(id);
     }
+    async findByCategoryLatest(id, limit) {
+        return this.newsService.findByCategoryLatest(id, limit);
+    }
+    async findByCategoryMostViewed(id, limit) {
+        return this.newsService.findByCategoryMostViewed(id, limit);
+    }
+    async findByCategoryOlder(id) {
+        return this.newsService.findByCategoryOlder(id);
+    }
 };
 exports.NewsController = NewsController;
 __decorate([
@@ -123,6 +132,29 @@ __decorate([
     __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", Promise)
 ], NewsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('category/:id/latest'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Query)('limit', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "findByCategoryLatest", null);
+__decorate([
+    (0, common_1.Get)('category/:id/most-viewed'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Query)('limit', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "findByCategoryMostViewed", null);
+__decorate([
+    (0, common_1.Get)('category/:id/older'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "findByCategoryOlder", null);
 exports.NewsController = NewsController = __decorate([
     (0, common_1.Controller)('news'),
     __metadata("design:paramtypes", [news_service_1.NewsService])
