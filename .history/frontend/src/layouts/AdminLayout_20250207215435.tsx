@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import {
   Box,
@@ -18,15 +18,17 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
+  Newspaper as NewsIcon,
   People as PeopleIcon,
+  AdminPanelSettings as RolesIcon,
+  Logout as LogoutIcon,
   SupervisorAccount as RoleIcon,
   Article as ArticleIcon,
-  Logout as LogoutIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
-const Layout = () => {
+const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const navigate = useNavigate();
@@ -37,14 +39,19 @@ const Layout = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/admin/login');
   };
 
   const validateToken = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Validating token:', token);
+      
       const response = await fetch('http://localhost:3000/auth/validate-token', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -52,27 +59,31 @@ const Layout = () => {
       }
 
       const userData = await response.json();
-      setIsSuperAdmin(userData.roles.some((role: { name: string }) => role.name === 'SUPER_ADMIN'));
+      console.log('User data:', userData);
+      
+      const isSuperAdmin = userData.roles.some((role: { name: string }) => role.name === 'SUPER_ADMIN');
+      console.log('Is super admin:', isSuperAdmin);
+      
+      setIsSuperAdmin(isSuperAdmin);
     } catch (err) {
       console.error('Token validation error:', err);
       localStorage.removeItem('token');
-      navigate('/login');
+      navigate('/admin/login');
     }
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login');
+      navigate('/admin/login');
       return;
     }
     validateToken();
   }, [navigate]);
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Haber Yönetimi', icon: <ArticleIcon />, path: '/news' },
-    { text: 'Kullanıcı Yönetimi', icon: <PeopleIcon />, path: '/users' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
+    { text: 'Kullanıcı Yönetimi', icon: <PeopleIcon />, path: '/admin/users' },
   ];
 
   // SUPER_ADMIN için rol yönetimi menüsünü ekle
@@ -80,9 +91,16 @@ const Layout = () => {
     menuItems.push({ 
       text: 'Rol Yönetimi', 
       icon: <RoleIcon />, 
-      path: '/roles' 
+      path: '/admin/roles' 
     });
   }
+
+  // Haber yönetimi menüsünü en sona ekle
+  menuItems.push({
+    text: 'Haber Yönetimi',
+    icon: <ArticleIcon />,
+    path: '/admin/news'
+  });
 
   const drawer = (
     <div>
@@ -178,4 +196,4 @@ const Layout = () => {
   );
 };
 
-export default Layout; 
+export default AdminLayout; 

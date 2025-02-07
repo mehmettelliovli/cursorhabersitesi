@@ -47,9 +47,15 @@ let UsersController = class UsersController {
         if (user.email === 'mehmet_developer@hotmail.com') {
             throw new common_1.ForbiddenException('Bu kullanıcı güncellenemez');
         }
-        const requestingUserRoles = req.user.roles.map(role => role.name);
-        if (!requestingUserRoles.includes('SUPER_ADMIN') && updateUserDto.roleIds) {
+        const requestingUser = await this.usersService.findOne(req.user.id);
+        const isSuperAdmin = requestingUser.roles.some(role => role.name === 'SUPER_ADMIN');
+        if (!isSuperAdmin && updateUserDto.roleIds) {
             throw new common_1.ForbiddenException('Sadece SUPER_ADMIN kullanıcıları rol güncelleyebilir');
+        }
+        const targetUserRoles = await this.usersService.getRolesByIds(updateUserDto.roleIds || []);
+        const hasSuperAdminRole = targetUserRoles.some(role => role.name === 'SUPER_ADMIN');
+        if (hasSuperAdminRole && user.email !== 'mehmet_developer@hotmail.com') {
+            throw new common_1.ForbiddenException('SUPER_ADMIN rolü sadece özel kullanıcılara verilebilir');
         }
         return this.usersService.update(id, updateUserDto);
     }

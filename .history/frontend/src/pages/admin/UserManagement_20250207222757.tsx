@@ -26,11 +26,12 @@ import {
   Chip,
   Switch,
   Snackbar,
+  Grid
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -69,6 +70,7 @@ const UserManagement = () => {
   const [error, setError] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
@@ -82,6 +84,7 @@ const UserManagement = () => {
     message: '',
     severity: 'success' as 'success' | 'error',
   });
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const validateToken = useCallback(async () => {
     try {
@@ -106,6 +109,7 @@ const UserManagement = () => {
 
       // Kullanıcının rollerini state'e kaydet
       setCurrentUserRoles(userData.roles.map((role: UserRole) => role.name));
+      setIsSuperAdmin(userData.roles.some((role: UserRole) => role.name === 'SUPER_ADMIN'));
     } catch (err: unknown) {
       console.error('Token validation error:', err);
       localStorage.removeItem('token');
@@ -185,6 +189,7 @@ const UserManagement = () => {
         isActive: user.isActive,
         roleIds: user.roles.map(role => role.id),
       });
+      setSelectedRoles(user.roles.map(role => role.id));
     } else {
       setSelectedUser(null);
       setFormData({
@@ -194,6 +199,7 @@ const UserManagement = () => {
         isActive: true,
         roleIds: [],
       });
+      setSelectedRoles([]);
     }
     setOpenDialog(true);
   };
@@ -219,7 +225,7 @@ const UserManagement = () => {
       
       const submitData = {
         ...formData,
-        roleIds: formData.roleIds,
+        roleIds: selectedRoles,
         ...(formData.password || !selectedUser ? { password: formData.password } : {})
       };
 
@@ -348,8 +354,39 @@ const UserManagement = () => {
     return []; // Diğer kullanıcılar için boş array
   }, [roles, currentUserRoles]); // Bağımlılıkları ekledik
 
-  // Kullanıcının SUPER_ADMIN olup olmadığını kontrol et
-  const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
+  const handleUserSelect = (user: User) => {
+    setSelectedUser(user);
+    setSelectedRoles(user.roles.map(role => role.id));
+  };
+
+  const handleRoleChange = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3000/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          roleIds: selectedRoles
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Güncelleme başarısız');
+      }
+
+      fetchData();
+      setError('');
+    } catch (err) {
+      console.error('Error updating roles:', err);
+      setError(err instanceof Error ? err.message : 'Roller güncellenirken bir hata oluştu');
+    }
+  };
 
   if (loading) {
     return (
@@ -381,65 +418,140 @@ const UserManagement = () => {
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Ad Soyad</TableCell>
-              <TableCell>E-posta</TableCell>
-              <TableCell>Roller</TableCell>
-              <TableCell>Durum</TableCell>
-              {isSuperAdmin && <TableCell align="right">İşlemler</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.fullName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  {user.roles.map((role) => (
-                    <Chip
-                      key={role.id}
-                      label={role.name}
-                      size="small"
-                      sx={{ 
-                        mr: 0.5, 
-                        mb: 0.5,
-                        bgcolor: role.name === 'SUPER_ADMIN' ? '#f44336' :
-                                role.name === 'ADMIN' ? '#2196f3' :
-                                role.name === 'AUTHOR' ? '#4caf50' : '#757575',
-                        color: 'white'
-                      }}
-                    />
-                  ))}
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={user.isActive}
-                    onChange={() => handleToggleActive(user)}
-                    color="primary"
-                  />
-                </TableCell>
-                {isSuperAdmin && (
-                  <TableCell align="right">
-                    <IconButton onClick={() => handleOpenDialog(user)} color="primary">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handleDelete(user.id)} 
-                      color="error"
-                      disabled={user.roles.some(role => role.name === 'SUPER_ADMIN')}
+      <Grid container spacing={3}>
+        {/* Sol Panel - Rol Atama (Sadece Super Admin için) */}
+        {isSuperAdmin && (
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Rol Atama
+              </Typography>
+              
+              {selectedUser ? (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Seçili Kullanıcı: {selectedUser.fullName}
+                  </Typography>
+                  
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <InputLabel>Roller</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedRoles}
+                      onChange={(e) => setSelectedRoles(e.target.value as number[])}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((value) => {
+                            const role = roles.find(r => r.id === value);
+                            return (
+                              <Chip
+                                key={value}
+                                label={role?.name}
+                                sx={{
+                                  bgcolor: role?.name === 'SUPER_ADMIN' ? '#f44336' :
+                                          role?.name === 'ADMIN' ? '#2196f3' :
+                                          role?.name === 'AUTHOR' ? '#4caf50' : '#757575',
+                                  color: 'white'
+                                }}
+                              />
+                            );
+                          })}
+                        </Box>
+                      )}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                      {roles.map((role) => (
+                        <MenuItem key={role.id} value={role.id}>
+                          {role.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    onClick={handleRoleChange}
+                  >
+                    Rolleri Güncelle
+                  </Button>
+                </>
+              ) : (
+                <Typography color="textSecondary">
+                  Rol atamak için bir kullanıcı seçin
+                </Typography>
+              )}
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Sağ Panel - Kullanıcı Listesi */}
+        <Grid item xs={12} md={isSuperAdmin ? 8 : 12}>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Ad Soyad</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Durum</TableCell>
+                  <TableCell>Roller</TableCell>
+                  <TableCell>İşlemler</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow 
+                    key={user.id}
+                    sx={{
+                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                      '&:hover': isSuperAdmin ? { backgroundColor: 'rgba(0, 0, 0, 0.04)' } : {}
+                    }}
+                    onClick={() => isSuperAdmin && handleUserSelect(user)}
+                  >
+                    <TableCell>{user.fullName}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Switch 
+                        checked={user.isActive}
+                        onChange={() => handleToggleActive(user)}
+                        color="primary"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {user.roles.map((role) => (
+                        <Chip
+                          key={role.id}
+                          label={role.name}
+                          size="small"
+                          sx={{ 
+                            mr: 0.5,
+                            bgcolor: role.name === 'SUPER_ADMIN' ? '#f44336' :
+                                    role.name === 'ADMIN' ? '#2196f3' :
+                                    role.name === 'AUTHOR' ? '#4caf50' : '#757575',
+                            color: 'white'
+                          }}
+                        />
+                      ))}
+                    </TableCell>
+                    <TableCell>
+                      <IconButton 
+                        disabled={user.email === 'mehmet_developer@hotmail.com'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(user.id);
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Grid>
+      </Grid>
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>

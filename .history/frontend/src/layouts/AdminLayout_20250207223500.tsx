@@ -22,13 +22,15 @@ import {
   People as PeopleIcon,
   AdminPanelSettings as RolesIcon,
   Logout as LogoutIcon,
+  SupervisorAccount as RoleIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
 const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const navigate = useNavigate();
 
   const handleDrawerToggle = () => {
@@ -43,8 +45,13 @@ const AdminLayout = () => {
   const validateToken = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Validating token:', token);
+      
       const response = await fetch('http://localhost:3000/auth/validate-token', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -52,7 +59,16 @@ const AdminLayout = () => {
       }
 
       const userData = await response.json();
-      setCurrentUserRoles(userData.roles.map((role: { name: string }) => role.name));
+      console.log('User data:', userData);
+      
+      const isSuperAdmin = userData.roles.some((role: { name: string }) => role.name === 'SUPER_ADMIN');
+      console.log('Is super admin:', isSuperAdmin);
+      
+      setIsSuperAdmin(isSuperAdmin);
+
+      if (!isSuperAdmin) {
+        console.log('User is not super admin');
+      }
     } catch (err) {
       console.error('Token validation error:', err);
       localStorage.removeItem('token');
@@ -71,16 +87,16 @@ const AdminLayout = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
-    { text: 'Haberler', icon: <NewsIcon />, path: '/admin/news' },
-    { text: 'Kullanıcılar', icon: <PeopleIcon />, path: '/admin/users' },
+    { text: 'Haber Yönetimi', icon: <ArticleIcon />, path: '/admin/news' },
+    { text: 'Kullanıcı Yönetimi', icon: <PeopleIcon />, path: '/admin/users' },
   ];
 
-  // SUPER_ADMIN için rol yönetimi menüsünü ekle
-  if (currentUserRoles.includes('SUPER_ADMIN')) {
+  // SUPER_ADMIN için rol atama menüsünü ekle
+  if (isSuperAdmin) {
     menuItems.push({ 
-      text: 'Rol Yönetimi', 
-      icon: <RolesIcon />, 
-      path: '/admin/roles' 
+      text: 'Rol Atama', 
+      icon: <RoleIcon />, 
+      path: '/admin/addrole' 
     });
   }
 
